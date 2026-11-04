@@ -1,0 +1,21 @@
+# Optional isolated PostgreSQL host for the demo. FineReport is installed separately.
+# A password must be supplied in the ignored .env file or the shell environment.
+# The database is reachable only through localhost; no automatic data reset occurs.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: dc_monitoring_demo
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your local .env file}
+    ports:
+      - "127.0.0.1:${DC_POSTGRES_PORT:-55432}:5432"
+    volumes:
+      - dc_demo_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d dc_monitoring_demo"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+volumes:
+  dc_demo_data:

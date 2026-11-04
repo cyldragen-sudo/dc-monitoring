@@ -1,0 +1,57 @@
+# Database and source verification need no FineReport license or saved secrets.
+# The password below belongs only to the short-lived isolated CI service.
+name: Validate demo
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: dc_monitoring_demo
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci_disposable_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d dc_monitoring_demo"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGDATABASE: dc_monitoring_demo
+      PGUSER: postgres
+      PGPASSWORD: ci_disposable_only
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Verify generated SQL and report are current
+        run: |
+          make build
+          git diff --exit-code -- dashboard
+      - name: Test interface logic and isolated installation
+        run: make test
+      - name: Restore empty database
+        run: python scripts/database.py init
+      - name: Verify all data contracts
+        run: python scripts/verify_database.py --require-sequences
+      - name: Verify initialization refuses existing data
+        run: |
+          if python scripts/database.py init; then
+            echo 'Initialization unexpectedly accepted an existing schema'
+            exit 1
+          fi
+      - name: Check public contents and build release archive
+        run: make package

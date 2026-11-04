@@ -1,0 +1,4734 @@
+{
+  "schema": "dcmon",
+  "comment": "Synthetic data-center monitoring inventory, effective-dated topology, telemetry and incident model. All demo thresholds and recovery targets are illustrative.",
+  "postgresql_major": 16,
+  "snapshot_at": "2026-10-21T14:32:00+03:00",
+  "provenance": "Read-only catalog and ordered table export of the synthetic demonstration; metadata translated into English.",
+  "extensions": [
+    {
+      "name": "btree_gist",
+      "purpose": "GiST equality operator classes used by temporal exclusion constraints."
+    }
+  ],
+  "relations": [
+    {
+      "name": "backup_run",
+      "kind": "table",
+      "comment": "Synthetic backup job outcomes for a system environment. Success alone does not prove RPO compliance or recoverability.",
+      "demo_rows": 54,
+      "columns": [
+        {
+          "attname": "id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable internal record identifier; not reused.",
+          "identity_generation": "BY DEFAULT",
+          "identity_sequence": "backup_run_id_seq"
+        },
+        {
+          "attname": "environment_id",
+          "attnum": 2,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "System environment owning or protected by this record."
+        },
+        {
+          "attname": "job_key",
+          "attnum": 3,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable job identity supplied by the backup system."
+        },
+        {
+          "attname": "source_id",
+          "attnum": 4,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Authoritative source record in dcmon.source_system."
+        },
+        {
+          "attname": "started_at",
+          "attnum": 5,
+          "type": "timestamp with time zone",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Start time of the operation."
+        },
+        {
+          "attname": "finished_at",
+          "attnum": 6,
+          "type": "timestamp with time zone",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Operation completion time; NULL while running."
+        },
+        {
+          "attname": "recovery_point_at",
+          "attnum": 7,
+          "type": "timestamp with time zone",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Timestamp of the data represented by the backup; basis for recovery-point age."
+        },
+        {
+          "attname": "status",
+          "attnum": 8,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Backup job result: running, success or failed. Partial is an ingestion state, not a backup result."
+        },
+        {
+          "attname": "size_gib",
+          "attnum": 9,
+          "type": "numeric(16,3)",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Size of the created backup in GiB."
+        },
+        {
+          "attname": "restore_test_at",
+          "attnum": 10,
+          "type": "timestamp with time zone",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Last restore test of this exact copy; NULL means no recorded verification."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "backup_run_check",
+          "contype": "c",
+          "definition": "CHECK (((finished_at IS NULL) OR (finished_at >= started_at)))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK (((finished_at IS NULL) OR (finished_at >= started_at)))."
+        },
+        {
+          "conname": "backup_run_check1",
+          "contype": "c",
+          "definition": "CHECK (((recovery_point_at IS NULL) OR (recovery_point_at <= finished_at)))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK (((recovery_point_at IS NULL) OR (recovery_point_at <= finished_at)))."
+        },
+        {
+          "conname": "backup_run_check2",
+          "contype": "c",
+          "definition": "CHECK (((status <> 'success'::text) OR ((finished_at IS NOT NULL) AND (recovery_point_at IS NOT NULL))))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK (((status <> 'success'::text) OR ((finished_at IS NOT NULL) AND (recovery_point_at IS NOT NULL))))."
+        },
+        {
+          "conname": "backup_run_environment_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (environment_id) REFERENCES system_environment(id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (environment_id) REFERENCES system_environment(id)."
+        },
+        {
+          "conname": "backup_run_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (id)."
+        },
+        {
+          "conname": "backup_run_size_gib_check",
+          "contype": "c",
+          "definition": "CHECK ((size_gib >= (0)::numeric))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((size_gib >= (0)::numeric))."
+        },
+        {
+          "conname": "backup_run_source_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (source_id) REFERENCES source_system(id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (source_id) REFERENCES source_system(id)."
+        },
+        {
+          "conname": "backup_run_source_id_job_key_started_at_key",
+          "contype": "u",
+          "definition": "UNIQUE (source_id, job_key, started_at)",
+          "comment": "Natural-key uniqueness. Rule: UNIQUE (source_id, job_key, started_at)."
+        },
+        {
+          "conname": "backup_run_status_check",
+          "contype": "c",
+          "definition": "CHECK ((status = ANY (ARRAY['running'::text, 'success'::text, 'failed'::text])))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((status = ANY (ARRAY['running'::text, 'success'::text, 'failed'::text])))."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "backup_run_pkey",
+          "definition": "CREATE UNIQUE INDEX backup_run_pkey ON dcmon.backup_run USING btree (id)",
+          "comment": "Enforces the stable primary-key identity on backup_run. Definition: btree (id)."
+        },
+        {
+          "name": "backup_run_source_id_job_key_started_at_key",
+          "definition": "CREATE UNIQUE INDEX backup_run_source_id_job_key_started_at_key ON dcmon.backup_run USING btree (source_id, job_key, started_at)",
+          "comment": "Prevents duplicate natural identities on backup_run. Definition: btree (source_id, job_key, started_at)."
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "name": "ci",
+      "kind": "table",
+      "comment": "Stable configuration-item identity shared by inventory, topology, telemetry and incidents. Type-specific attributes live in subtype tables.",
+      "demo_rows": 4495,
+      "columns": [
+        {
+          "attname": "ci_id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable internal CI identifier, never reused across object lifecycles.",
+          "identity_generation": "BY DEFAULT",
+          "identity_sequence": "ci_ci_id_seq"
+        },
+        {
+          "attname": "ci_key",
+          "attnum": 2,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable readable object key; changing a hostname does not create a new CI."
+        },
+        {
+          "attname": "kind",
+          "attnum": 3,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Configuration-item subtype discriminator."
+        },
+        {
+          "attname": "name",
+          "attnum": 4,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Human-readable display name; does not replace a stable identifier."
+        },
+        {
+          "attname": "owner_team_id",
+          "attnum": 5,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Team responsible for the object or incident."
+        },
+        {
+          "attname": "lifecycle",
+          "attnum": 6,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Inventory lifecycle, separate from technical health and incident workflow state."
+        },
+        {
+          "attname": "retired_at",
+          "attnum": 7,
+          "type": "timestamp with time zone",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Retirement time; NULL before retirement. Preserves historical object visibility."
+        },
+        {
+          "attname": "first_seen_at",
+          "attnum": 8,
+          "type": "timestamp with time zone",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "First discovery time in an inventory source."
+        },
+        {
+          "attname": "last_seen_at",
+          "attnum": 9,
+          "type": "timestamp with time zone",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Last source confirmation of existence or identity; not telemetry observation time."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "ci_check",
+          "contype": "c",
+          "definition": "CHECK ((last_seen_at >= first_seen_at))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((last_seen_at >= first_seen_at))."
+        },
+        {
+          "conname": "ci_check1",
+          "contype": "c",
+          "definition": "CHECK (((lifecycle = 'retired'::text) = (retired_at IS NOT NULL)))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK (((lifecycle = 'retired'::text) = (retired_at IS NOT NULL)))."
+        },
+        {
+          "conname": "ci_check2",
+          "contype": "c",
+          "definition": "CHECK (((retired_at IS NULL) OR (retired_at >= first_seen_at)))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK (((retired_at IS NULL) OR (retired_at >= first_seen_at)))."
+        },
+        {
+          "conname": "ci_ci_key_key",
+          "contype": "u",
+          "definition": "UNIQUE (ci_key)",
+          "comment": "Natural-key uniqueness. Rule: UNIQUE (ci_key)."
+        },
+        {
+          "conname": "ci_kind_check",
+          "contype": "c",
+          "definition": "CHECK ((kind = ANY (ARRAY['site'::text, 'room'::text, 'rack'::text, 'device'::text, 'runtime'::text, 'cluster'::text, 'installation'::text, 'system'::text, 'component'::text, 'volume'::text])))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((kind = ANY (ARRAY['site'::text, 'room'::text, 'rack'::text, 'device'::text, 'runtime'::text, 'cluster'::text, 'installation'::text, 'system'::text, 'component'::text, 'volume'::text])))."
+        },
+        {
+          "conname": "ci_lifecycle_check",
+          "contype": "c",
+          "definition": "CHECK ((lifecycle = ANY (ARRAY['planned'::text, 'active'::text, 'retired'::text])))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((lifecycle = ANY (ARRAY['planned'::text, 'active'::text, 'retired'::text])))."
+        },
+        {
+          "conname": "ci_owner_team_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (owner_team_id) REFERENCES team(id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (owner_team_id) REFERENCES team(id)."
+        },
+        {
+          "conname": "ci_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (ci_id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (ci_id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "ci_ci_key_key",
+          "definition": "CREATE UNIQUE INDEX ci_ci_key_key ON dcmon.ci USING btree (ci_key)",
+          "comment": "Prevents duplicate natural identities on ci. Definition: btree (ci_key)."
+        },
+        {
+          "name": "ci_pkey",
+          "definition": "CREATE UNIQUE INDEX ci_pkey ON dcmon.ci USING btree (ci_id)",
+          "comment": "Enforces the stable primary-key identity on ci. Definition: btree (ci_id)."
+        }
+      ],
+      "triggers": [
+        {
+          "name": "ci_kind_immutable",
+          "definition": "CREATE TRIGGER ci_kind_immutable BEFORE UPDATE OF kind ON dcmon.ci FOR EACH ROW EXECUTE FUNCTION immutable_ci_kind()",
+          "function_name": "immutable_ci_kind",
+          "comment": "Before ci kind updates, rejects a different subtype with SQLSTATE 23514 so existing subtype, topology and telemetry references retain their interpretation. Other inventory attributes may change. Retiring/replacing a CI preserves identity history instead of retyping it."
+        }
+      ]
+    },
+    {
+      "name": "cluster",
+      "kind": "table",
+      "comment": "Logical virtualization, Kubernetes, database or storage cluster; membership may span sites.",
+      "demo_rows": 5,
+      "columns": [
+        {
+          "attname": "ci_id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable reference to the configuration item in dcmon.ci."
+        },
+        {
+          "attname": "cluster_type",
+          "attnum": 2,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Cluster purpose or orchestration type."
+        },
+        {
+          "attname": "platform",
+          "attnum": 3,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Technology or platform implementing the cluster."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "cluster_ci_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (ci_id) REFERENCES ci(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (ci_id) REFERENCES ci(ci_id)."
+        },
+        {
+          "conname": "cluster_cluster_type_check",
+          "contype": "c",
+          "definition": "CHECK ((cluster_type = ANY (ARRAY['virtualization'::text, 'kubernetes'::text, 'database'::text, 'storage'::text])))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((cluster_type = ANY (ARRAY['virtualization'::text, 'kubernetes'::text, 'database'::text, 'storage'::text])))."
+        },
+        {
+          "conname": "cluster_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (ci_id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (ci_id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "cluster_pkey",
+          "definition": "CREATE UNIQUE INDEX cluster_pkey ON dcmon.cluster USING btree (ci_id)",
+          "comment": "Enforces the stable primary-key identity on cluster. Definition: btree (ci_id)."
+        }
+      ],
+      "triggers": [
+        {
+          "name": "subtype_kind",
+          "definition": "CREATE TRIGGER subtype_kind BEFORE INSERT OR UPDATE ON dcmon.cluster FOR EACH ROW EXECUTE FUNCTION require_ci_kind('cluster')",
+          "function_name": "require_ci_kind",
+          "comment": "On subtype INSERT/UPDATE, compares NEW.ci_id to the expected dcmon.ci.kind supplied in the trigger argument. Rejects both missing CIs and mismatches with SQLSTATE 23514; foreign keys separately maintain ownership. Does not require every CI to have a subtype row. Uses caller search_path dcmon,public."
+        }
+      ]
+    },
+    {
+      "name": "cluster_member",
+      "kind": "table",
+      "comment": "Effective-dated membership of a configuration item in a logical cluster.",
+      "demo_rows": 74,
+      "columns": [
+        {
+          "attname": "id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable internal record identifier; not reused.",
+          "identity_generation": "BY DEFAULT",
+          "identity_sequence": "cluster_member_id_seq"
+        },
+        {
+          "attname": "cluster_id",
+          "attnum": 2,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Logical cluster receiving the member."
+        },
+        {
+          "attname": "member_id",
+          "attnum": 3,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Cluster member CI: a device, runtime or software installation."
+        },
+        {
+          "attname": "valid_from",
+          "attnum": 4,
+          "type": "timestamp with time zone",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Inclusive start of the relationship validity interval; business event time, not ingestion time."
+        },
+        {
+          "attname": "valid_to",
+          "attnum": 5,
+          "type": "timestamp with time zone",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Exclusive end of the relationship validity interval; NULL means open-ended."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "cluster_member_check",
+          "contype": "c",
+          "definition": "CHECK ((cluster_id <> member_id))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((cluster_id <> member_id))."
+        },
+        {
+          "conname": "cluster_member_check1",
+          "contype": "c",
+          "definition": "CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))."
+        },
+        {
+          "conname": "cluster_member_cluster_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (cluster_id) REFERENCES cluster(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (cluster_id) REFERENCES cluster(ci_id)."
+        },
+        {
+          "conname": "cluster_member_cluster_id_member_id_tstzrange_excl",
+          "contype": "x",
+          "definition": "EXCLUDE USING gist (cluster_id WITH =, member_id WITH =, tstzrange(valid_from, valid_to, '[)'::text) WITH &&)",
+          "comment": "Temporal or physical exclusivity. Rule: EXCLUDE USING gist (cluster_id WITH =, member_id WITH =, tstzrange(valid_from, valid_to, '[)'::text) WITH &&)."
+        },
+        {
+          "conname": "cluster_member_member_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (member_id) REFERENCES ci(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (member_id) REFERENCES ci(ci_id)."
+        },
+        {
+          "conname": "cluster_member_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "cluster_member_cluster_id_member_id_tstzrange_excl",
+          "definition": "CREATE INDEX cluster_member_cluster_id_member_id_tstzrange_excl ON dcmon.cluster_member USING gist (cluster_id, member_id, tstzrange(valid_from, valid_to, '[)'::text))",
+          "comment": "Prevents overlapping effective-dated relationships on cluster_member. Definition: gist (cluster_id, member_id, tstzrange(valid_from, valid_to, '[)'::text))."
+        },
+        {
+          "name": "cluster_member_pkey",
+          "definition": "CREATE UNIQUE INDEX cluster_member_pkey ON dcmon.cluster_member USING btree (id)",
+          "comment": "Enforces the stable primary-key identity on cluster_member. Definition: btree (id)."
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "name": "component",
+      "kind": "table",
+      "comment": "Logical application component within one system environment; multiple deployments can implement the same component.",
+      "demo_rows": 36,
+      "columns": [
+        {
+          "attname": "ci_id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable reference to the configuration item in dcmon.ci."
+        },
+        {
+          "attname": "environment_id",
+          "attnum": 2,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "System environment owning or protected by this record."
+        },
+        {
+          "attname": "component_role",
+          "attnum": 3,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Architectural role within the application, such as web or database."
+        },
+        {
+          "attname": "description",
+          "attnum": 4,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Component purpose and responsibility boundary."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "component_ci_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (ci_id) REFERENCES ci(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (ci_id) REFERENCES ci(ci_id)."
+        },
+        {
+          "conname": "component_component_role_check",
+          "contype": "c",
+          "definition": "CHECK ((component_role = ANY (ARRAY['web'::text, 'api'::text, 'database'::text, 'queue'::text, 'batch'::text])))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((component_role = ANY (ARRAY['web'::text, 'api'::text, 'database'::text, 'queue'::text, 'batch'::text])))."
+        },
+        {
+          "conname": "component_environment_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (environment_id) REFERENCES system_environment(id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (environment_id) REFERENCES system_environment(id)."
+        },
+        {
+          "conname": "component_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (ci_id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (ci_id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "component_environment_idx",
+          "definition": "CREATE INDEX component_environment_idx ON dcmon.component USING btree (environment_id)",
+          "comment": "Finds application components for a selected system environment on component. Definition: btree (environment_id)."
+        },
+        {
+          "name": "component_pkey",
+          "definition": "CREATE UNIQUE INDEX component_pkey ON dcmon.component USING btree (ci_id)",
+          "comment": "Enforces the stable primary-key identity on component. Definition: btree (ci_id)."
+        }
+      ],
+      "triggers": [
+        {
+          "name": "subtype_kind",
+          "definition": "CREATE TRIGGER subtype_kind BEFORE INSERT OR UPDATE ON dcmon.component FOR EACH ROW EXECUTE FUNCTION require_ci_kind('component')",
+          "function_name": "require_ci_kind",
+          "comment": "On subtype INSERT/UPDATE, compares NEW.ci_id to the expected dcmon.ci.kind supplied in the trigger argument. Rejects both missing CIs and mismatches with SQLSTATE 23514; foreign keys separately maintain ownership. Does not require every CI to have a subtype row. Uses caller search_path dcmon,public."
+        }
+      ]
+    },
+    {
+      "name": "dependency",
+      "kind": "table",
+      "comment": "Directed consumer-to-provider dependency, including shared applications, power, cooling, network and storage. A dependency alone does not prove application failure.",
+      "demo_rows": 3997,
+      "columns": [
+        {
+          "attname": "id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable internal record identifier; not reused.",
+          "identity_generation": "BY DEFAULT",
+          "identity_sequence": "dependency_id_seq"
+        },
+        {
+          "attname": "dependent_id",
+          "attnum": 2,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Consumer CI that relies on the provider; traversal follows this direction."
+        },
+        {
+          "attname": "provider_id",
+          "attnum": 3,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Provider CI supplying an application or infrastructure resource."
+        },
+        {
+          "attname": "dependency_type",
+          "attnum": 4,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Dependency category controlling allowed endpoint types and graph traversal."
+        },
+        {
+          "attname": "redundancy_group",
+          "attnum": 5,
+          "type": "text",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Optional redundancy label such as A/B; does not itself calculate resilience."
+        },
+        {
+          "attname": "source_id",
+          "attnum": 6,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Authoritative source record in dcmon.source_system."
+        },
+        {
+          "attname": "valid_from",
+          "attnum": 7,
+          "type": "timestamp with time zone",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Inclusive start of the relationship validity interval; business event time, not ingestion time."
+        },
+        {
+          "attname": "valid_to",
+          "attnum": 8,
+          "type": "timestamp with time zone",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Exclusive end of the relationship validity interval; NULL means open-ended."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "dependency_check",
+          "contype": "c",
+          "definition": "CHECK ((dependent_id <> provider_id))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((dependent_id <> provider_id))."
+        },
+        {
+          "conname": "dependency_check1",
+          "contype": "c",
+          "definition": "CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))."
+        },
+        {
+          "conname": "dependency_dependency_type_check",
+          "contype": "c",
+          "definition": "CHECK ((dependency_type = ANY (ARRAY['application'::text, 'power'::text, 'cooling'::text, 'network'::text, 'storage'::text])))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((dependency_type = ANY (ARRAY['application'::text, 'power'::text, 'cooling'::text, 'network'::text, 'storage'::text])))."
+        },
+        {
+          "conname": "dependency_dependent_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (dependent_id) REFERENCES ci(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (dependent_id) REFERENCES ci(ci_id)."
+        },
+        {
+          "conname": "dependency_dependent_id_provider_id_dependency_type_tstzra_excl",
+          "contype": "x",
+          "definition": "EXCLUDE USING gist (dependent_id WITH =, provider_id WITH =, dependency_type WITH =, tstzrange(valid_from, valid_to, '[)'::text) WITH &&)",
+          "comment": "Temporal or physical exclusivity. Rule: EXCLUDE USING gist (dependent_id WITH =, provider_id WITH =, dependency_type WITH =, tstzrange(valid_from, valid_to, '[)'::text) WITH &&)."
+        },
+        {
+          "conname": "dependency_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (id)."
+        },
+        {
+          "conname": "dependency_provider_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (provider_id) REFERENCES ci(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (provider_id) REFERENCES ci(ci_id)."
+        },
+        {
+          "conname": "dependency_source_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (source_id) REFERENCES source_system(id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (source_id) REFERENCES source_system(id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "dependency_dependent_id_provider_id_dependency_type_tstzra_excl",
+          "definition": "CREATE INDEX dependency_dependent_id_provider_id_dependency_type_tstzra_excl ON dcmon.dependency USING gist (dependent_id, provider_id, dependency_type, tstzrange(valid_from, valid_to, '[)'::text))",
+          "comment": "Prevents overlapping effective-dated relationships on dependency. Definition: gist (dependent_id, provider_id, dependency_type, tstzrange(valid_from, valid_to, '[)'::text))."
+        },
+        {
+          "name": "dependency_dependent_idx",
+          "definition": "CREATE INDEX dependency_dependent_idx ON dcmon.dependency USING btree (dependent_id)",
+          "comment": "Traverses directed dependencies from consumer to infrastructure provider on dependency. Definition: btree (dependent_id)."
+        },
+        {
+          "name": "dependency_pkey",
+          "definition": "CREATE UNIQUE INDEX dependency_pkey ON dcmon.dependency USING btree (id)",
+          "comment": "Enforces the stable primary-key identity on dependency. Definition: btree (id)."
+        },
+        {
+          "name": "dependency_provider_idx",
+          "definition": "CREATE INDEX dependency_provider_idx ON dcmon.dependency USING btree (provider_id)",
+          "comment": "Finds consumers of a provider for inventory investigation; traversal direction remains explicit on dependency. Definition: btree (provider_id)."
+        }
+      ],
+      "triggers": [
+        {
+          "name": "valid_dependency",
+          "definition": "CREATE TRIGGER valid_dependency BEFORE INSERT OR UPDATE ON dcmon.dependency FOR EACH ROW EXECUTE FUNCTION check_dependency()",
+          "function_name": "check_dependency",
+          "comment": "Checks directed consumer/provider types on dependency INSERT/UPDATE. Application: component to component/installation; power: device/rack to PDU/UPS/generator; cooling: room/rack/device to CRAC/chiller; network: device/runtime to switch; storage: device/runtime to storage. Rejects unknown/missing endpoint types with SQLSTATE 23514; does not infer availability, redundancy or traversal in the reverse direction. Uses caller search_path dcmon,public."
+        }
+      ]
+    },
+    {
+      "name": "deployment",
+      "kind": "table",
+      "comment": "Effective-dated deployment of a component onto compute or a software installation; multiple components may share a host.",
+      "demo_rows": 965,
+      "columns": [
+        {
+          "attname": "id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable internal record identifier; not reused.",
+          "identity_generation": "BY DEFAULT",
+          "identity_sequence": "deployment_id_seq"
+        },
+        {
+          "attname": "component_id",
+          "attnum": 2,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Application component being deployed."
+        },
+        {
+          "attname": "target_id",
+          "attnum": 3,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Compute or software-installation CI receiving the component; validated by trigger."
+        },
+        {
+          "attname": "role",
+          "attnum": 4,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Deployment role such as primary or standby; standby does not imply failure."
+        },
+        {
+          "attname": "valid_from",
+          "attnum": 5,
+          "type": "timestamp with time zone",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Inclusive start of the relationship validity interval; business event time, not ingestion time."
+        },
+        {
+          "attname": "valid_to",
+          "attnum": 6,
+          "type": "timestamp with time zone",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Exclusive end of the relationship validity interval; NULL means open-ended."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "deployment_check",
+          "contype": "c",
+          "definition": "CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))."
+        },
+        {
+          "conname": "deployment_component_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (component_id) REFERENCES component(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (component_id) REFERENCES component(ci_id)."
+        },
+        {
+          "conname": "deployment_component_id_target_id_tstzrange_excl",
+          "contype": "x",
+          "definition": "EXCLUDE USING gist (component_id WITH =, target_id WITH =, tstzrange(valid_from, valid_to, '[)'::text) WITH &&)",
+          "comment": "Temporal or physical exclusivity. Rule: EXCLUDE USING gist (component_id WITH =, target_id WITH =, tstzrange(valid_from, valid_to, '[)'::text) WITH &&)."
+        },
+        {
+          "conname": "deployment_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (id)."
+        },
+        {
+          "conname": "deployment_role_check",
+          "contype": "c",
+          "definition": "CHECK ((role = ANY (ARRAY['primary'::text, 'replica'::text, 'standby'::text, 'worker'::text])))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((role = ANY (ARRAY['primary'::text, 'replica'::text, 'standby'::text, 'worker'::text])))."
+        },
+        {
+          "conname": "deployment_target_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (target_id) REFERENCES ci(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (target_id) REFERENCES ci(ci_id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "deployment_component_id_target_id_tstzrange_excl",
+          "definition": "CREATE INDEX deployment_component_id_target_id_tstzrange_excl ON dcmon.deployment USING gist (component_id, target_id, tstzrange(valid_from, valid_to, '[)'::text))",
+          "comment": "Prevents overlapping effective-dated relationships on deployment. Definition: gist (component_id, target_id, tstzrange(valid_from, valid_to, '[)'::text))."
+        },
+        {
+          "name": "deployment_pkey",
+          "definition": "CREATE UNIQUE INDEX deployment_pkey ON dcmon.deployment USING btree (id)",
+          "comment": "Enforces the stable primary-key identity on deployment. Definition: btree (id)."
+        },
+        {
+          "name": "deployment_target_idx",
+          "definition": "CREATE INDEX deployment_target_idx ON dcmon.deployment USING btree (target_id)",
+          "comment": "Finds component deployments targeting a compute or installation CI on deployment. Definition: btree (target_id)."
+        }
+      ],
+      "triggers": [
+        {
+          "name": "valid_deployment",
+          "definition": "CREATE TRIGGER valid_deployment BEFORE INSERT OR UPDATE ON dcmon.deployment FOR EACH ROW EXECUTE FUNCTION check_compute_reference()",
+          "function_name": "check_compute_reference",
+          "comment": "Validates INSERT/UPDATE targets for deployment, installation_placement and volume_attachment. A compute target is a physical server or any runtime; only deployment may additionally target software_installation. Raises SQLSTATE 23514 on a type mismatch; foreign keys separately require existence. Uses the caller search_path dcmon,public."
+        }
+      ]
+    },
+    {
+      "name": "device",
+      "kind": "table",
+      "comment": "Physical equipment inventory: servers, storage, switches, power, cooling and safety devices.",
+      "demo_rows": 1200,
+      "columns": [
+        {
+          "attname": "ci_id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable reference to the configuration item in dcmon.ci."
+        },
+        {
+          "attname": "device_class",
+          "attnum": 2,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Physical device class; immutable after creation to protect typed relationships."
+        },
+        {
+          "attname": "manufacturer",
+          "attnum": 3,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Equipment manufacturer; synthetic demo attribution."
+        },
+        {
+          "attname": "model",
+          "attnum": 4,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Equipment model or synthetic chassis description."
+        },
+        {
+          "attname": "serial_number",
+          "attnum": 5,
+          "type": "text",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Device serial number; NULL when the source provides none."
+        },
+        {
+          "attname": "cpu_cores",
+          "attnum": 6,
+          "type": "integer",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Installed physical CPU cores on a server; distinct from allocated vCPU."
+        },
+        {
+          "attname": "memory_gib",
+          "attnum": 7,
+          "type": "numeric(12,2)",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Installed server memory in GiB."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "device_ci_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (ci_id) REFERENCES ci(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (ci_id) REFERENCES ci(ci_id)."
+        },
+        {
+          "conname": "device_cpu_cores_check",
+          "contype": "c",
+          "definition": "CHECK ((cpu_cores > 0))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((cpu_cores > 0))."
+        },
+        {
+          "conname": "device_device_class_check",
+          "contype": "c",
+          "definition": "CHECK ((device_class = ANY (ARRAY['server'::text, 'storage'::text, 'switch'::text, 'ups'::text, 'pdu'::text, 'crac'::text, 'chiller'::text, 'generator'::text, 'fire_sensor'::text, 'access_controller'::text])))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((device_class = ANY (ARRAY['server'::text, 'storage'::text, 'switch'::text, 'ups'::text, 'pdu'::text, 'crac'::text, 'chiller'::text, 'generator'::text, 'fire_sensor'::text, 'access_controller'::text])))."
+        },
+        {
+          "conname": "device_memory_gib_check",
+          "contype": "c",
+          "definition": "CHECK ((memory_gib > (0)::numeric))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((memory_gib > (0)::numeric))."
+        },
+        {
+          "conname": "device_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (ci_id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (ci_id)."
+        },
+        {
+          "conname": "device_serial_number_key",
+          "contype": "u",
+          "definition": "UNIQUE (serial_number)",
+          "comment": "Natural-key uniqueness. Rule: UNIQUE (serial_number)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "device_pkey",
+          "definition": "CREATE UNIQUE INDEX device_pkey ON dcmon.device USING btree (ci_id)",
+          "comment": "Enforces the stable primary-key identity on device. Definition: btree (ci_id)."
+        },
+        {
+          "name": "device_serial_number_key",
+          "definition": "CREATE UNIQUE INDEX device_serial_number_key ON dcmon.device USING btree (serial_number)",
+          "comment": "Prevents duplicate natural identities on device. Definition: btree (serial_number)."
+        }
+      ],
+      "triggers": [
+        {
+          "name": "device_class_guard",
+          "definition": "CREATE TRIGGER device_class_guard BEFORE UPDATE OF device_class ON dcmon.device FOR EACH ROW EXECUTE FUNCTION immutable_device_class()",
+          "function_name": "immutable_device_class",
+          "comment": "Before device_class updates, rejects a different class with SQLSTATE 23514 because dependency and hosting rules rely on that class. Replace or retire an incorrectly classified device through an explicit migration rather than silently reinterpreting relationships."
+        },
+        {
+          "name": "subtype_kind",
+          "definition": "CREATE TRIGGER subtype_kind BEFORE INSERT OR UPDATE ON dcmon.device FOR EACH ROW EXECUTE FUNCTION require_ci_kind('device')",
+          "function_name": "require_ci_kind",
+          "comment": "On subtype INSERT/UPDATE, compares NEW.ci_id to the expected dcmon.ci.kind supplied in the trigger argument. Rejects both missing CIs and mismatches with SQLSTATE 23514; foreign keys separately maintain ownership. Does not require every CI to have a subtype row. Uses caller search_path dcmon,public."
+        }
+      ]
+    },
+    {
+      "name": "device_placement",
+      "kind": "table",
+      "comment": "Effective-dated physical placement. Rack equipment occupies a U interval; floor equipment has a room without a rack.",
+      "demo_rows": 1200,
+      "columns": [
+        {
+          "attname": "id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable internal record identifier; not reused.",
+          "identity_generation": "BY DEFAULT",
+          "identity_sequence": "device_placement_id_seq"
+        },
+        {
+          "attname": "device_id",
+          "attnum": 2,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Physical device owning the port or placement."
+        },
+        {
+          "attname": "room_id",
+          "attnum": 3,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Physical room containing this object."
+        },
+        {
+          "attname": "rack_id",
+          "attnum": 4,
+          "type": "bigint",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Rack containing the device; NULL for floor equipment."
+        },
+        {
+          "attname": "u_start",
+          "attnum": 5,
+          "type": "integer",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "First occupied rack unit, counted from 1; NULL for floor or 0U equipment."
+        },
+        {
+          "attname": "u_height",
+          "attnum": 6,
+          "type": "integer",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Number of occupied rack units; NULL together with u_start for 0U equipment."
+        },
+        {
+          "attname": "valid_from",
+          "attnum": 7,
+          "type": "timestamp with time zone",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Inclusive start of the relationship validity interval; business event time, not ingestion time."
+        },
+        {
+          "attname": "valid_to",
+          "attnum": 8,
+          "type": "timestamp with time zone",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Exclusive end of the relationship validity interval; NULL means open-ended."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "device_placement_check",
+          "contype": "c",
+          "definition": "CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))."
+        },
+        {
+          "conname": "device_placement_check1",
+          "contype": "c",
+          "definition": "CHECK ((((u_start IS NULL) AND (u_height IS NULL)) OR ((rack_id IS NOT NULL) AND (u_start > 0) AND (u_height > 0))))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((((u_start IS NULL) AND (u_height IS NULL)) OR ((rack_id IS NOT NULL) AND (u_start > 0) AND (u_height > 0))))."
+        },
+        {
+          "conname": "device_placement_check2",
+          "contype": "c",
+          "definition": "CHECK (((rack_id IS NOT NULL) OR ((u_start IS NULL) AND (u_height IS NULL))))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK (((rack_id IS NOT NULL) OR ((u_start IS NULL) AND (u_height IS NULL))))."
+        },
+        {
+          "conname": "device_placement_device_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (device_id) REFERENCES device(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (device_id) REFERENCES device(ci_id)."
+        },
+        {
+          "conname": "device_placement_device_id_tstzrange_excl",
+          "contype": "x",
+          "definition": "EXCLUDE USING gist (device_id WITH =, tstzrange(valid_from, valid_to, '[)'::text) WITH &&)",
+          "comment": "Temporal or physical exclusivity. Rule: EXCLUDE USING gist (device_id WITH =, tstzrange(valid_from, valid_to, '[)'::text) WITH &&)."
+        },
+        {
+          "conname": "device_placement_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (id)."
+        },
+        {
+          "conname": "device_placement_rack_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (rack_id) REFERENCES rack(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (rack_id) REFERENCES rack(ci_id)."
+        },
+        {
+          "conname": "device_placement_rack_id_int4range_tstzrange_excl",
+          "contype": "x",
+          "definition": "EXCLUDE USING gist (rack_id WITH =, int4range(u_start, (u_start + u_height), '[)'::text) WITH &&, tstzrange(valid_from, valid_to, '[)'::text) WITH &&) WHERE ((u_start IS NOT NULL))",
+          "comment": "Temporal or physical exclusivity. Rule: EXCLUDE USING gist (rack_id WITH =, int4range(u_start, (u_start + u_height), '[)'::text) WITH &&, tstzrange(valid_from, valid_to, '[)'::text) WITH &&) WHERE ((u_start IS NOT NULL))."
+        },
+        {
+          "conname": "device_placement_rack_id_room_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (rack_id, room_id) REFERENCES rack(ci_id, room_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (rack_id, room_id) REFERENCES rack(ci_id, room_id)."
+        },
+        {
+          "conname": "device_placement_room_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (room_id) REFERENCES room(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (room_id) REFERENCES room(ci_id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "device_placement_device_id_tstzrange_excl",
+          "definition": "CREATE INDEX device_placement_device_id_tstzrange_excl ON dcmon.device_placement USING gist (device_id, tstzrange(valid_from, valid_to, '[)'::text))",
+          "comment": "Prevents overlapping effective-dated relationships on device_placement. Definition: gist (device_id, tstzrange(valid_from, valid_to, '[)'::text))."
+        },
+        {
+          "name": "device_placement_pkey",
+          "definition": "CREATE UNIQUE INDEX device_placement_pkey ON dcmon.device_placement USING btree (id)",
+          "comment": "Enforces the stable primary-key identity on device_placement. Definition: btree (id)."
+        },
+        {
+          "name": "device_placement_rack_id_int4range_tstzrange_excl",
+          "definition": "CREATE INDEX device_placement_rack_id_int4range_tstzrange_excl ON dcmon.device_placement USING gist (rack_id, int4range(u_start, (u_start + u_height), '[)'::text), tstzrange(valid_from, valid_to, '[)'::text)) WHERE (u_start IS NOT NULL)",
+          "comment": "Prevents overlapping effective-dated relationships on device_placement. Definition: gist (rack_id, int4range(u_start, (u_start + u_height), '[)'::text), tstzrange(valid_from, valid_to, '[)'::text)) WHERE (u_start IS NOT NULL)."
+        },
+        {
+          "name": "placement_rack_idx",
+          "definition": "CREATE INDEX placement_rack_idx ON dcmon.device_placement USING btree (rack_id)",
+          "comment": "Finds all device placements in a rack for layout and capacity checks on device_placement. Definition: btree (rack_id)."
+        }
+      ],
+      "triggers": [
+        {
+          "name": "valid_rack_space",
+          "definition": "CREATE TRIGGER valid_rack_space BEFORE INSERT OR UPDATE ON dcmon.device_placement FOR EACH ROW EXECUTE FUNCTION check_rack_space()",
+          "function_name": "check_rack_space",
+          "comment": "On device_placement INSERT/UPDATE with a U interval, acquires a shared lock on the target rack and checks inclusive top U (u_start+u_height-1) against height_u. NULL U denotes floor/0U placement and bypasses the capacity test; table checks and exclusions enforce other shape/overlap rules. Raises SQLSTATE 23514 on overflow. Uses caller search_path dcmon,public."
+        }
+      ]
+    },
+    {
+      "name": "external_identity",
+      "kind": "table",
+      "comment": "Mapping of stable CI identities to source-specific identifiers such as NetBox IDs, vCenter IDs and Kubernetes UIDs.",
+      "demo_rows": 619,
+      "columns": [
+        {
+          "attname": "source_id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Authoritative source record in dcmon.source_system."
+        },
+        {
+          "attname": "external_id",
+          "attnum": 2,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Unique identity within a source; Kubernetes uses UID rather than name alone."
+        },
+        {
+          "attname": "ci_id",
+          "attnum": 3,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable reference to the configuration item in dcmon.ci."
+        },
+        {
+          "attname": "last_seen_at",
+          "attnum": 4,
+          "type": "timestamp with time zone",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Last source confirmation of existence or identity; not telemetry observation time."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "external_identity_ci_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (ci_id) REFERENCES ci(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (ci_id) REFERENCES ci(ci_id)."
+        },
+        {
+          "conname": "external_identity_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (source_id, external_id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (source_id, external_id)."
+        },
+        {
+          "conname": "external_identity_source_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (source_id) REFERENCES source_system(id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (source_id) REFERENCES source_system(id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "external_identity_ci_idx",
+          "definition": "CREATE INDEX external_identity_ci_idx ON dcmon.external_identity USING btree (ci_id)",
+          "comment": "Finds all source-specific identities associated with one stable CI on external_identity. Definition: btree (ci_id)."
+        },
+        {
+          "name": "external_identity_pkey",
+          "definition": "CREATE UNIQUE INDEX external_identity_pkey ON dcmon.external_identity USING btree (source_id, external_id)",
+          "comment": "Enforces the stable primary-key identity on external_identity. Definition: btree (source_id, external_id)."
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "name": "hosting",
+      "kind": "table",
+      "comment": "Effective-dated VM, pod and container hosting. Endpoint type rules prevent invalid hosting cycles.",
+      "demo_rows": 146,
+      "columns": [
+        {
+          "attname": "id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable internal record identifier; not reused.",
+          "identity_generation": "BY DEFAULT",
+          "identity_sequence": "hosting_id_seq"
+        },
+        {
+          "attname": "guest_id",
+          "attnum": 2,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Guest runtime CI: VM, pod or container."
+        },
+        {
+          "attname": "host_id",
+          "attnum": 3,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Compute host CI; endpoint type is validated."
+        },
+        {
+          "attname": "valid_from",
+          "attnum": 4,
+          "type": "timestamp with time zone",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Inclusive start of the relationship validity interval; business event time, not ingestion time."
+        },
+        {
+          "attname": "valid_to",
+          "attnum": 5,
+          "type": "timestamp with time zone",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Exclusive end of the relationship validity interval; NULL means open-ended."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "hosting_check",
+          "contype": "c",
+          "definition": "CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))."
+        },
+        {
+          "conname": "hosting_check1",
+          "contype": "c",
+          "definition": "CHECK ((guest_id <> host_id))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((guest_id <> host_id))."
+        },
+        {
+          "conname": "hosting_guest_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (guest_id) REFERENCES runtime(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (guest_id) REFERENCES runtime(ci_id)."
+        },
+        {
+          "conname": "hosting_guest_id_tstzrange_excl",
+          "contype": "x",
+          "definition": "EXCLUDE USING gist (guest_id WITH =, tstzrange(valid_from, valid_to, '[)'::text) WITH &&)",
+          "comment": "Temporal or physical exclusivity. Rule: EXCLUDE USING gist (guest_id WITH =, tstzrange(valid_from, valid_to, '[)'::text) WITH &&)."
+        },
+        {
+          "conname": "hosting_host_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (host_id) REFERENCES ci(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (host_id) REFERENCES ci(ci_id)."
+        },
+        {
+          "conname": "hosting_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "hosting_guest_id_tstzrange_excl",
+          "definition": "CREATE INDEX hosting_guest_id_tstzrange_excl ON dcmon.hosting USING gist (guest_id, tstzrange(valid_from, valid_to, '[)'::text))",
+          "comment": "Prevents overlapping effective-dated relationships on hosting. Definition: gist (guest_id, tstzrange(valid_from, valid_to, '[)'::text))."
+        },
+        {
+          "name": "hosting_host_idx",
+          "definition": "CREATE INDEX hosting_host_idx ON dcmon.hosting USING btree (host_id)",
+          "comment": "Finds guests on a host for explicit inventory lookup, without implying reverse scope traversal on hosting. Definition: btree (host_id)."
+        },
+        {
+          "name": "hosting_pkey",
+          "definition": "CREATE UNIQUE INDEX hosting_pkey ON dcmon.hosting USING btree (id)",
+          "comment": "Enforces the stable primary-key identity on hosting. Definition: btree (id)."
+        }
+      ],
+      "triggers": [
+        {
+          "name": "valid_hosting",
+          "definition": "CREATE TRIGGER valid_hosting BEFORE INSERT OR UPDATE ON dcmon.hosting FOR EACH ROW EXECUTE FUNCTION check_hosting()",
+          "function_name": "check_hosting",
+          "comment": "Checks hosting INSERT/UPDATE hierarchy: VM to physical server, pod to VM/server, container to pod. Rejects invalid or missing endpoint types with SQLSTATE 23514. Effective-dated overlap constraints separately prevent simultaneous hosts. Uses caller search_path dcmon,public."
+        }
+      ]
+    },
+    {
+      "name": "incident",
+      "kind": "table",
+      "comment": "Stable incident identity and descriptive attributes. Current and historical workflow state come from incident_event.",
+      "demo_rows": 2,
+      "columns": [
+        {
+          "attname": "id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable internal record identifier; not reused.",
+          "identity_generation": "BY DEFAULT",
+          "identity_sequence": "incident_id_seq"
+        },
+        {
+          "attname": "incident_key",
+          "attnum": 2,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable human-readable incident key."
+        },
+        {
+          "attname": "source_id",
+          "attnum": 3,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Authoritative source record in dcmon.source_system."
+        },
+        {
+          "attname": "external_id",
+          "attnum": 4,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Incident identity within its source system."
+        },
+        {
+          "attname": "title",
+          "attnum": 5,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Short incident description."
+        },
+        {
+          "attname": "severity",
+          "attnum": 6,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Incident impact severity, separate from business-system criticality."
+        },
+        {
+          "attname": "detected_at",
+          "attnum": 7,
+          "type": "timestamp with time zone",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "First detection timestamp."
+        },
+        {
+          "attname": "owner_team_id",
+          "attnum": 8,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Team responsible for the object or incident."
+        },
+        {
+          "attname": "response_due_at",
+          "attnum": 9,
+          "type": "timestamp with time zone",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Response deadline under the agreed service rule."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "incident_incident_key_key",
+          "contype": "u",
+          "definition": "UNIQUE (incident_key)",
+          "comment": "Natural-key uniqueness. Rule: UNIQUE (incident_key)."
+        },
+        {
+          "conname": "incident_owner_team_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (owner_team_id) REFERENCES team(id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (owner_team_id) REFERENCES team(id)."
+        },
+        {
+          "conname": "incident_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (id)."
+        },
+        {
+          "conname": "incident_severity_check",
+          "contype": "c",
+          "definition": "CHECK ((severity = ANY (ARRAY['info'::text, 'warning'::text, 'critical'::text])))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((severity = ANY (ARRAY['info'::text, 'warning'::text, 'critical'::text])))."
+        },
+        {
+          "conname": "incident_source_id_external_id_key",
+          "contype": "u",
+          "definition": "UNIQUE (source_id, external_id)",
+          "comment": "Natural-key uniqueness. Rule: UNIQUE (source_id, external_id)."
+        },
+        {
+          "conname": "incident_source_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (source_id) REFERENCES source_system(id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (source_id) REFERENCES source_system(id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "incident_incident_key_key",
+          "definition": "CREATE UNIQUE INDEX incident_incident_key_key ON dcmon.incident USING btree (incident_key)",
+          "comment": "Prevents duplicate natural identities on incident. Definition: btree (incident_key)."
+        },
+        {
+          "name": "incident_pkey",
+          "definition": "CREATE UNIQUE INDEX incident_pkey ON dcmon.incident USING btree (id)",
+          "comment": "Enforces the stable primary-key identity on incident. Definition: btree (id)."
+        },
+        {
+          "name": "incident_source_id_external_id_key",
+          "definition": "CREATE UNIQUE INDEX incident_source_id_external_id_key ON dcmon.incident USING btree (source_id, external_id)",
+          "comment": "Prevents duplicate natural identities on incident. Definition: btree (source_id, external_id)."
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "name": "incident_ci",
+      "kind": "table",
+      "comment": "Explicit incident-to-CI links distinguishing cause, confirmed impact and potential risk.",
+      "demo_rows": 4,
+      "columns": [
+        {
+          "attname": "incident_id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Incident record referenced by this link or event."
+        },
+        {
+          "attname": "ci_id",
+          "attnum": 2,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable reference to the configuration item in dcmon.ci."
+        },
+        {
+          "attname": "impact_role",
+          "attnum": 3,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "cause, affected or at_risk; potential risk does not assert a confirmed outage."
+        },
+        {
+          "attname": "linked_at",
+          "attnum": 4,
+          "type": "timestamp with time zone",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Time the object association was confirmed; respected by historical scope queries."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "incident_ci_ci_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (ci_id) REFERENCES ci(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (ci_id) REFERENCES ci(ci_id)."
+        },
+        {
+          "conname": "incident_ci_impact_role_check",
+          "contype": "c",
+          "definition": "CHECK ((impact_role = ANY (ARRAY['cause'::text, 'affected'::text, 'at_risk'::text])))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((impact_role = ANY (ARRAY['cause'::text, 'affected'::text, 'at_risk'::text])))."
+        },
+        {
+          "conname": "incident_ci_incident_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (incident_id) REFERENCES incident(id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (incident_id) REFERENCES incident(id)."
+        },
+        {
+          "conname": "incident_ci_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (incident_id, ci_id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (incident_id, ci_id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "incident_ci_pkey",
+          "definition": "CREATE UNIQUE INDEX incident_ci_pkey ON dcmon.incident_ci USING btree (incident_id, ci_id)",
+          "comment": "Enforces the stable primary-key identity on incident_ci. Definition: btree (incident_id, ci_id)."
+        },
+        {
+          "name": "incident_ci_reverse_idx",
+          "definition": "CREATE INDEX incident_ci_reverse_idx ON dcmon.incident_ci USING btree (ci_id)",
+          "comment": "Finds incident links for an in-scope configuration item on incident_ci. Definition: btree (ci_id)."
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "name": "incident_event",
+      "kind": "table",
+      "comment": "Incident workflow event history, used to reconstruct the state at a requested time.",
+      "demo_rows": 5,
+      "columns": [
+        {
+          "attname": "id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable internal record identifier; not reused.",
+          "identity_generation": "BY DEFAULT",
+          "identity_sequence": "incident_event_id_seq"
+        },
+        {
+          "attname": "incident_id",
+          "attnum": 2,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Incident record referenced by this link or event."
+        },
+        {
+          "attname": "occurred_at",
+          "attnum": 3,
+          "type": "timestamp with time zone",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Time the incident workflow transition occurred."
+        },
+        {
+          "attname": "state",
+          "attnum": 4,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Workflow state after the event: open, acknowledged, in_progress, resolved or closed."
+        },
+        {
+          "attname": "note",
+          "attnum": 5,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Synthetic action or diagnostic note without personal information."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "incident_event_incident_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (incident_id) REFERENCES incident(id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (incident_id) REFERENCES incident(id)."
+        },
+        {
+          "conname": "incident_event_incident_id_occurred_at_key",
+          "contype": "u",
+          "definition": "UNIQUE (incident_id, occurred_at)",
+          "comment": "Natural-key uniqueness. Rule: UNIQUE (incident_id, occurred_at)."
+        },
+        {
+          "conname": "incident_event_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (id)."
+        },
+        {
+          "conname": "incident_event_state_check",
+          "contype": "c",
+          "definition": "CHECK ((state = ANY (ARRAY['open'::text, 'acknowledged'::text, 'in_progress'::text, 'resolved'::text, 'closed'::text])))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((state = ANY (ARRAY['open'::text, 'acknowledged'::text, 'in_progress'::text, 'resolved'::text, 'closed'::text])))."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "incident_event_incident_id_occurred_at_key",
+          "definition": "CREATE UNIQUE INDEX incident_event_incident_id_occurred_at_key ON dcmon.incident_event USING btree (incident_id, occurred_at)",
+          "comment": "Prevents duplicate natural identities on incident_event. Definition: btree (incident_id, occurred_at)."
+        },
+        {
+          "name": "incident_event_latest_idx",
+          "definition": "CREATE INDEX incident_event_latest_idx ON dcmon.incident_event USING btree (incident_id, occurred_at DESC)",
+          "comment": "Selects the latest workflow event at or before a requested incident time on incident_event. Definition: btree (incident_id, occurred_at DESC)."
+        },
+        {
+          "name": "incident_event_pkey",
+          "definition": "CREATE UNIQUE INDEX incident_event_pkey ON dcmon.incident_event USING btree (id)",
+          "comment": "Enforces the stable primary-key identity on incident_event. Definition: btree (id)."
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "name": "information_system",
+      "kind": "table",
+      "comment": "Business-system catalog and recovery requirements; requirements are separate from measured availability.",
+      "demo_rows": 6,
+      "columns": [
+        {
+          "attname": "ci_id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable reference to the configuration item in dcmon.ci."
+        },
+        {
+          "attname": "description",
+          "attnum": 2,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Purpose of the business application."
+        },
+        {
+          "attname": "criticality",
+          "attnum": 3,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Business criticality classification; independent of current faults."
+        },
+        {
+          "attname": "target_rto_min",
+          "attnum": 4,
+          "type": "integer",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Required recovery time in minutes; a target rather than observed recovery duration."
+        },
+        {
+          "attname": "target_rpo_min",
+          "attnum": 5,
+          "type": "integer",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Required maximum data-loss time in minutes; agreed with the service owner."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "information_system_ci_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (ci_id) REFERENCES ci(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (ci_id) REFERENCES ci(ci_id)."
+        },
+        {
+          "conname": "information_system_criticality_check",
+          "contype": "c",
+          "definition": "CHECK ((criticality = ANY (ARRAY['critical'::text, 'high'::text, 'standard'::text])))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((criticality = ANY (ARRAY['critical'::text, 'high'::text, 'standard'::text])))."
+        },
+        {
+          "conname": "information_system_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (ci_id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (ci_id)."
+        },
+        {
+          "conname": "information_system_target_rpo_min_check",
+          "contype": "c",
+          "definition": "CHECK ((target_rpo_min >= 0))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((target_rpo_min >= 0))."
+        },
+        {
+          "conname": "information_system_target_rto_min_check",
+          "contype": "c",
+          "definition": "CHECK ((target_rto_min >= 0))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((target_rto_min >= 0))."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "information_system_pkey",
+          "definition": "CREATE UNIQUE INDEX information_system_pkey ON dcmon.information_system USING btree (ci_id)",
+          "comment": "Enforces the stable primary-key identity on information_system. Definition: btree (ci_id)."
+        }
+      ],
+      "triggers": [
+        {
+          "name": "subtype_kind",
+          "definition": "CREATE TRIGGER subtype_kind BEFORE INSERT OR UPDATE ON dcmon.information_system FOR EACH ROW EXECUTE FUNCTION require_ci_kind('system')",
+          "function_name": "require_ci_kind",
+          "comment": "On subtype INSERT/UPDATE, compares NEW.ci_id to the expected dcmon.ci.kind supplied in the trigger argument. Rejects both missing CIs and mismatches with SQLSTATE 23514; foreign keys separately maintain ownership. Does not require every CI to have a subtype row. Uses caller search_path dcmon,public."
+        }
+      ]
+    },
+    {
+      "name": "ingestion_run",
+      "kind": "table",
+      "comment": "Synthetic ingestion audit trail: processing state, cursor watermark and accepted/rejected row counts.",
+      "demo_rows": 8,
+      "columns": [
+        {
+          "attname": "id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable internal record identifier; not reused.",
+          "identity_generation": "BY DEFAULT",
+          "identity_sequence": "ingestion_run_id_seq"
+        },
+        {
+          "attname": "source_id",
+          "attnum": 2,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Authoritative source record in dcmon.source_system."
+        },
+        {
+          "attname": "started_at",
+          "attnum": 3,
+          "type": "timestamp with time zone",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Start time of the operation."
+        },
+        {
+          "attname": "finished_at",
+          "attnum": 4,
+          "type": "timestamp with time zone",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Operation completion time; NULL while running."
+        },
+        {
+          "attname": "state",
+          "attnum": 5,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Ingestion state: running, success, partial or failed."
+        },
+        {
+          "attname": "cursor_value",
+          "attnum": 6,
+          "type": "text",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Watermark or API cursor after a processed batch; never an access token."
+        },
+        {
+          "attname": "accepted_rows",
+          "attnum": 7,
+          "type": "integer",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Number of rows accepted by the ingestion run."
+        },
+        {
+          "attname": "rejected_rows",
+          "attnum": 8,
+          "type": "integer",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Number of rows rejected by validation or processing."
+        },
+        {
+          "attname": "error_summary",
+          "attnum": 9,
+          "type": "text",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Short sanitized processing diagnostic; NULL if no error is recorded."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "ingestion_run_accepted_rows_check",
+          "contype": "c",
+          "definition": "CHECK ((accepted_rows >= 0))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((accepted_rows >= 0))."
+        },
+        {
+          "conname": "ingestion_run_check",
+          "contype": "c",
+          "definition": "CHECK (((finished_at IS NULL) OR (finished_at >= started_at)))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK (((finished_at IS NULL) OR (finished_at >= started_at)))."
+        },
+        {
+          "conname": "ingestion_run_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (id)."
+        },
+        {
+          "conname": "ingestion_run_rejected_rows_check",
+          "contype": "c",
+          "definition": "CHECK ((rejected_rows >= 0))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((rejected_rows >= 0))."
+        },
+        {
+          "conname": "ingestion_run_source_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (source_id) REFERENCES source_system(id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (source_id) REFERENCES source_system(id)."
+        },
+        {
+          "conname": "ingestion_run_state_check",
+          "contype": "c",
+          "definition": "CHECK ((state = ANY (ARRAY['running'::text, 'success'::text, 'partial'::text, 'failed'::text])))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((state = ANY (ARRAY['running'::text, 'success'::text, 'partial'::text, 'failed'::text])))."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "ingestion_run_pkey",
+          "definition": "CREATE UNIQUE INDEX ingestion_run_pkey ON dcmon.ingestion_run USING btree (id)",
+          "comment": "Enforces the stable primary-key identity on ingestion_run. Definition: btree (id)."
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "name": "installation_placement",
+      "kind": "table",
+      "comment": "Effective-dated placement of a software installation on a physical server, VM or container.",
+      "demo_rows": 3040,
+      "columns": [
+        {
+          "attname": "id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable internal record identifier; not reused.",
+          "identity_generation": "BY DEFAULT",
+          "identity_sequence": "installation_placement_id_seq"
+        },
+        {
+          "attname": "installation_id",
+          "attnum": 2,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Concrete software installation referenced by the placement."
+        },
+        {
+          "attname": "host_id",
+          "attnum": 3,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Compute host CI; endpoint type is validated."
+        },
+        {
+          "attname": "valid_from",
+          "attnum": 4,
+          "type": "timestamp with time zone",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Inclusive start of the relationship validity interval; business event time, not ingestion time."
+        },
+        {
+          "attname": "valid_to",
+          "attnum": 5,
+          "type": "timestamp with time zone",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Exclusive end of the relationship validity interval; NULL means open-ended."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "installation_placement_check",
+          "contype": "c",
+          "definition": "CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))."
+        },
+        {
+          "conname": "installation_placement_host_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (host_id) REFERENCES ci(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (host_id) REFERENCES ci(ci_id)."
+        },
+        {
+          "conname": "installation_placement_installation_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (installation_id) REFERENCES software_installation(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (installation_id) REFERENCES software_installation(ci_id)."
+        },
+        {
+          "conname": "installation_placement_installation_id_tstzrange_excl",
+          "contype": "x",
+          "definition": "EXCLUDE USING gist (installation_id WITH =, tstzrange(valid_from, valid_to, '[)'::text) WITH &&)",
+          "comment": "Temporal or physical exclusivity. Rule: EXCLUDE USING gist (installation_id WITH =, tstzrange(valid_from, valid_to, '[)'::text) WITH &&)."
+        },
+        {
+          "conname": "installation_placement_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "installation_host_idx",
+          "definition": "CREATE INDEX installation_host_idx ON dcmon.installation_placement USING btree (host_id)",
+          "comment": "Finds software placed on nodes of an execution path on installation_placement. Definition: btree (host_id)."
+        },
+        {
+          "name": "installation_placement_installation_id_tstzrange_excl",
+          "definition": "CREATE INDEX installation_placement_installation_id_tstzrange_excl ON dcmon.installation_placement USING gist (installation_id, tstzrange(valid_from, valid_to, '[)'::text))",
+          "comment": "Prevents overlapping effective-dated relationships on installation_placement. Definition: gist (installation_id, tstzrange(valid_from, valid_to, '[)'::text))."
+        },
+        {
+          "name": "installation_placement_pkey",
+          "definition": "CREATE UNIQUE INDEX installation_placement_pkey ON dcmon.installation_placement USING btree (id)",
+          "comment": "Enforces the stable primary-key identity on installation_placement. Definition: btree (id)."
+        }
+      ],
+      "triggers": [
+        {
+          "name": "valid_installation_host",
+          "definition": "CREATE TRIGGER valid_installation_host BEFORE INSERT OR UPDATE ON dcmon.installation_placement FOR EACH ROW EXECUTE FUNCTION check_compute_reference()",
+          "function_name": "check_compute_reference",
+          "comment": "Validates INSERT/UPDATE targets for deployment, installation_placement and volume_attachment. A compute target is a physical server or any runtime; only deployment may additionally target software_installation. Raises SQLSTATE 23514 on a type mismatch; foreign keys separately require existence. Uses the caller search_path dcmon,public."
+        }
+      ]
+    },
+    {
+      "name": "maintenance_window",
+      "kind": "table",
+      "comment": "Approved planned maintenance for a CI; displayed separately from unplanned technical faults.",
+      "demo_rows": 1,
+      "columns": [
+        {
+          "attname": "id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable internal record identifier; not reused.",
+          "identity_generation": "BY DEFAULT",
+          "identity_sequence": "maintenance_window_id_seq"
+        },
+        {
+          "attname": "ci_id",
+          "attnum": 2,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable reference to the configuration item in dcmon.ci."
+        },
+        {
+          "attname": "starts_at",
+          "attnum": 3,
+          "type": "timestamp with time zone",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Inclusive start of the agreed maintenance window."
+        },
+        {
+          "attname": "ends_at",
+          "attnum": 4,
+          "type": "timestamp with time zone",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "End of the agreed maintenance window; strictly after starts_at."
+        },
+        {
+          "attname": "reason",
+          "attnum": 5,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Description of planned maintenance work."
+        },
+        {
+          "attname": "change_ref",
+          "attnum": 6,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Approved change reference from the service-management process."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "maintenance_window_check",
+          "contype": "c",
+          "definition": "CHECK ((ends_at > starts_at))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((ends_at > starts_at))."
+        },
+        {
+          "conname": "maintenance_window_ci_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (ci_id) REFERENCES ci(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (ci_id) REFERENCES ci(ci_id)."
+        },
+        {
+          "conname": "maintenance_window_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "maintenance_window_pkey",
+          "definition": "CREATE UNIQUE INDEX maintenance_window_pkey ON dcmon.maintenance_window USING btree (id)",
+          "comment": "Enforces the stable primary-key identity on maintenance_window. Definition: btree (id)."
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "name": "metric_definition",
+      "kind": "table",
+      "comment": "Canonical metric names, units, value domains and illustrative demo thresholds.",
+      "demo_rows": 26,
+      "columns": [
+        {
+          "attname": "id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable internal record identifier; not reused.",
+          "identity_generation": "BY DEFAULT",
+          "identity_sequence": "metric_definition_id_seq"
+        },
+        {
+          "attname": "code",
+          "attnum": 2,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable machine-readable catalog code."
+        },
+        {
+          "attname": "name",
+          "attnum": 3,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Human-readable metric label; values use the canonical unit column."
+        },
+        {
+          "attname": "unit",
+          "attnum": 4,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Canonical unit after normalization; interpreted together with metric code."
+        },
+        {
+          "attname": "metric_type",
+          "attnum": 5,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "gauge is an instantaneous reading; counter is cumulative and requires rate conversion for throughput."
+        },
+        {
+          "attname": "valid_min",
+          "attnum": 6,
+          "type": "numeric",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Lower valid value boundary; NULL leaves the lower side unrestricted."
+        },
+        {
+          "attname": "valid_max",
+          "attnum": 7,
+          "type": "numeric",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Upper valid value boundary; NULL leaves the upper side unrestricted."
+        },
+        {
+          "attname": "warning_above",
+          "attnum": 8,
+          "type": "numeric",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Illustrative demo upper warning threshold; NULL means no such threshold."
+        },
+        {
+          "attname": "critical_above",
+          "attnum": 9,
+          "type": "numeric",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Illustrative demo upper critical threshold; NULL means no such threshold."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "metric_definition_check",
+          "contype": "c",
+          "definition": "CHECK (((valid_max IS NULL) OR (valid_min IS NULL) OR (valid_max >= valid_min)))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK (((valid_max IS NULL) OR (valid_min IS NULL) OR (valid_max >= valid_min)))."
+        },
+        {
+          "conname": "metric_definition_check1",
+          "contype": "c",
+          "definition": "CHECK (((critical_above IS NULL) OR (warning_above IS NULL) OR (critical_above >= warning_above)))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK (((critical_above IS NULL) OR (warning_above IS NULL) OR (critical_above >= warning_above)))."
+        },
+        {
+          "conname": "metric_definition_code_key",
+          "contype": "u",
+          "definition": "UNIQUE (code)",
+          "comment": "Natural-key uniqueness. Rule: UNIQUE (code)."
+        },
+        {
+          "conname": "metric_definition_metric_type_check",
+          "contype": "c",
+          "definition": "CHECK ((metric_type = ANY (ARRAY['gauge'::text, 'counter'::text])))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((metric_type = ANY (ARRAY['gauge'::text, 'counter'::text])))."
+        },
+        {
+          "conname": "metric_definition_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "metric_definition_code_key",
+          "definition": "CREATE UNIQUE INDEX metric_definition_code_key ON dcmon.metric_definition USING btree (code)",
+          "comment": "Prevents duplicate natural identities on metric_definition. Definition: btree (code)."
+        },
+        {
+          "name": "metric_definition_pkey",
+          "definition": "CREATE UNIQUE INDEX metric_definition_pkey ON dcmon.metric_definition USING btree (id)",
+          "comment": "Enforces the stable primary-key identity on metric_definition. Definition: btree (id)."
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "name": "metric_sample",
+      "kind": "table",
+      "comment": "Numeric telemetry facts with distinct observation and ingestion times. Missing/error samples have NULL values, never fabricated zeros.",
+      "demo_rows": 1058182,
+      "columns": [
+        {
+          "attname": "series_id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable metric-series identity referencing dcmon.metric_series."
+        },
+        {
+          "attname": "observed_at",
+          "attnum": 2,
+          "type": "timestamp with time zone",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Time the fact was observed in the source; used for as-of selection."
+        },
+        {
+          "attname": "ingested_at",
+          "attnum": 3,
+          "type": "timestamp with time zone",
+          "attnotnull": true,
+          "default_expr": "clock_timestamp()",
+          "comment": "Time the observation reached the warehouse; separate from observed_at."
+        },
+        {
+          "attname": "value",
+          "attnum": 4,
+          "type": "numeric",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Numeric value in metric_definition.unit; NULL for missing/error quality, never a substituted zero."
+        },
+        {
+          "attname": "quality",
+          "attnum": 5,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Point quality: ok requires a finite value; missing and error require NULL."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "metric_sample_check",
+          "contype": "c",
+          "definition": "CHECK ((((quality = 'ok'::text) AND (value IS NOT NULL) AND (value <> ALL (ARRAY['NaN'::numeric, 'Infinity'::numeric, '-Infinity'::numeric]))) OR ((quality <> 'ok'::text) AND (value IS NULL))))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((((quality = 'ok'::text) AND (value IS NOT NULL) AND (value <> ALL (ARRAY['NaN'::numeric, 'Infinity'::numeric, '-Infinity'::numeric]))) OR ((quality <> 'ok'::text) AND (value IS NULL))))."
+        },
+        {
+          "conname": "metric_sample_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (series_id, observed_at)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (series_id, observed_at)."
+        },
+        {
+          "conname": "metric_sample_quality_check",
+          "contype": "c",
+          "definition": "CHECK ((quality = ANY (ARRAY['ok'::text, 'missing'::text, 'error'::text])))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((quality = ANY (ARRAY['ok'::text, 'missing'::text, 'error'::text])))."
+        },
+        {
+          "conname": "metric_sample_series_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (series_id) REFERENCES metric_series(series_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (series_id) REFERENCES metric_series(series_id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "metric_sample_latest_idx",
+          "definition": "CREATE INDEX metric_sample_latest_idx ON dcmon.metric_sample USING btree (series_id, observed_at DESC)",
+          "comment": "Selects the most recent sample at or before p_at for each series on metric_sample. Definition: btree (series_id, observed_at DESC)."
+        },
+        {
+          "name": "metric_sample_pkey",
+          "definition": "CREATE UNIQUE INDEX metric_sample_pkey ON dcmon.metric_sample USING btree (series_id, observed_at)",
+          "comment": "Enforces the stable primary-key identity on metric_sample. Definition: btree (series_id, observed_at)."
+        },
+        {
+          "name": "metric_sample_time_brin",
+          "definition": "CREATE INDEX metric_sample_time_brin ON dcmon.metric_sample USING brin (observed_at)",
+          "comment": "Uses compact block-range summaries for observed-time range scans on append-like telemetry on metric_sample. Definition: brin (observed_at)."
+        }
+      ],
+      "triggers": [
+        {
+          "name": "valid_metric_range",
+          "definition": "CREATE TRIGGER valid_metric_range BEFORE INSERT OR UPDATE ON dcmon.metric_sample FOR EACH ROW EXECUTE FUNCTION check_metric_value()",
+          "function_name": "check_metric_value",
+          "comment": "On metric_sample INSERT/UPDATE, validates only quality=ok against its definition valid_min/valid_max. NULL bounds leave that side unrestricted. Table checks independently require finite values for ok and NULL for missing/error. Warning and critical thresholds are presentation guidance, never validity limits. Raises SQLSTATE 23514 for a range breach. Uses caller search_path dcmon,public."
+        }
+      ]
+    },
+    {
+      "name": "metric_series",
+      "kind": "table",
+      "comment": "One CI, metric and JSON label set measured by a selected authoritative source; collection and freshness budgets are explicit.",
+      "demo_rows": 40574,
+      "columns": [
+        {
+          "attname": "series_id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable metric-series identity referencing dcmon.metric_series.",
+          "identity_generation": "BY DEFAULT",
+          "identity_sequence": "metric_series_series_id_seq"
+        },
+        {
+          "attname": "ci_id",
+          "attnum": 2,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable reference to the configuration item in dcmon.ci."
+        },
+        {
+          "attname": "metric_id",
+          "attnum": 3,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Definition providing metric code, unit, value range and thresholds."
+        },
+        {
+          "attname": "source_id",
+          "attnum": 4,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Authoritative source record in dcmon.source_system."
+        },
+        {
+          "attname": "labels",
+          "attnum": 5,
+          "type": "jsonb",
+          "attnotnull": true,
+          "default_expr": "'{}'::jsonb",
+          "comment": "Low-cardinality JSON dimensions such as disk, port, sensor or power feed; not request IDs."
+        },
+        {
+          "attname": "expected_interval_sec",
+          "attnum": 6,
+          "type": "integer",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Expected measurement collection interval in seconds; positive."
+        },
+        {
+          "attname": "stale_after_sec",
+          "attnum": 7,
+          "type": "integer",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Maximum accepted observation age in seconds; at least the expected interval."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "metric_series_check",
+          "contype": "c",
+          "definition": "CHECK ((stale_after_sec >= expected_interval_sec))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((stale_after_sec >= expected_interval_sec))."
+        },
+        {
+          "conname": "metric_series_ci_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (ci_id) REFERENCES ci(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (ci_id) REFERENCES ci(ci_id)."
+        },
+        {
+          "conname": "metric_series_ci_id_metric_id_labels_key",
+          "contype": "u",
+          "definition": "UNIQUE (ci_id, metric_id, labels)",
+          "comment": "Natural-key uniqueness. Rule: UNIQUE (ci_id, metric_id, labels)."
+        },
+        {
+          "conname": "metric_series_expected_interval_sec_check",
+          "contype": "c",
+          "definition": "CHECK ((expected_interval_sec > 0))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((expected_interval_sec > 0))."
+        },
+        {
+          "conname": "metric_series_labels_check",
+          "contype": "c",
+          "definition": "CHECK ((jsonb_typeof(labels) = 'object'::text))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((jsonb_typeof(labels) = 'object'::text))."
+        },
+        {
+          "conname": "metric_series_metric_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (metric_id) REFERENCES metric_definition(id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (metric_id) REFERENCES metric_definition(id)."
+        },
+        {
+          "conname": "metric_series_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (series_id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (series_id)."
+        },
+        {
+          "conname": "metric_series_source_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (source_id) REFERENCES source_system(id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (source_id) REFERENCES source_system(id)."
+        },
+        {
+          "conname": "metric_series_stale_after_sec_check",
+          "contype": "c",
+          "definition": "CHECK ((stale_after_sec > 0))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((stale_after_sec > 0))."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "metric_series_ci_id_metric_id_labels_key",
+          "definition": "CREATE UNIQUE INDEX metric_series_ci_id_metric_id_labels_key ON dcmon.metric_series USING btree (ci_id, metric_id, labels)",
+          "comment": "Prevents duplicate natural identities on metric_series. Definition: btree (ci_id, metric_id, labels)."
+        },
+        {
+          "name": "metric_series_ci_idx",
+          "definition": "CREATE INDEX metric_series_ci_idx ON dcmon.metric_series USING btree (ci_id)",
+          "comment": "Finds metric series for a selected configuration item on metric_series. Definition: btree (ci_id)."
+        },
+        {
+          "name": "metric_series_pkey",
+          "definition": "CREATE UNIQUE INDEX metric_series_pkey ON dcmon.metric_series USING btree (series_id)",
+          "comment": "Enforces the stable primary-key identity on metric_series. Definition: btree (series_id)."
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "name": "network_link",
+      "kind": "table",
+      "comment": "Effective-dated physical connection between two ports. Exclusion constraints prevent a port from having concurrent cables.",
+      "demo_rows": 1944,
+      "columns": [
+        {
+          "attname": "id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable internal record identifier; not reused.",
+          "identity_generation": "BY DEFAULT",
+          "identity_sequence": "network_link_id_seq"
+        },
+        {
+          "attname": "port_a_id",
+          "attnum": 2,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Lower numeric endpoint port ID; canonical ordering avoids mirrored links."
+        },
+        {
+          "attname": "port_b_id",
+          "attnum": 3,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Higher numeric endpoint port ID; canonical ordering avoids mirrored links."
+        },
+        {
+          "attname": "valid_from",
+          "attnum": 4,
+          "type": "timestamp with time zone",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Inclusive start of the relationship validity interval; business event time, not ingestion time."
+        },
+        {
+          "attname": "valid_to",
+          "attnum": 5,
+          "type": "timestamp with time zone",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Exclusive end of the relationship validity interval; NULL means open-ended."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "network_link_check",
+          "contype": "c",
+          "definition": "CHECK ((port_a_id < port_b_id))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((port_a_id < port_b_id))."
+        },
+        {
+          "conname": "network_link_check1",
+          "contype": "c",
+          "definition": "CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))."
+        },
+        {
+          "conname": "network_link_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (id)."
+        },
+        {
+          "conname": "network_link_port_a_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (port_a_id) REFERENCES network_port(id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (port_a_id) REFERENCES network_port(id)."
+        },
+        {
+          "conname": "network_link_port_b_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (port_b_id) REFERENCES network_port(id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (port_b_id) REFERENCES network_port(id)."
+        },
+        {
+          "conname": "no_port_overlap",
+          "contype": "x",
+          "definition": "EXCLUDE USING gist (int8multirange(VARIADIC ARRAY[int8range(port_a_id, port_a_id, '[]'::text), int8range(port_b_id, port_b_id, '[]'::text)]) WITH &&, tstzrange(valid_from, valid_to, '[)'::text) WITH &&)",
+          "comment": "Temporal or physical exclusivity. Rule: EXCLUDE USING gist (int8multirange(VARIADIC ARRAY[int8range(port_a_id, port_a_id, '[]'::text), int8range(port_b_id, port_b_id, '[]'::text)]) WITH &&, tstzrange(valid_from, valid_to, '[)'::text) WITH &&)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "network_link_pkey",
+          "definition": "CREATE UNIQUE INDEX network_link_pkey ON dcmon.network_link USING btree (id)",
+          "comment": "Enforces the stable primary-key identity on network_link. Definition: btree (id)."
+        },
+        {
+          "name": "no_port_overlap",
+          "definition": "CREATE INDEX no_port_overlap ON dcmon.network_link USING gist (int8multirange(VARIADIC ARRAY[int8range(port_a_id, port_a_id, '[]'::text), int8range(port_b_id, port_b_id, '[]'::text)]), tstzrange(valid_from, valid_to, '[)'::text))",
+          "comment": "Prevents overlapping effective-dated relationships on network_link. Definition: gist (int8multirange(VARIADIC ARRAY[int8range(port_a_id, port_a_id, '[]'::text), int8range(port_b_id, port_b_id, '[]'::text)]), tstzrange(valid_from, valid_to, '[)'::text))."
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "name": "network_port",
+      "kind": "table",
+      "comment": "Physical network interface belonging to a device; nominal speed is not measured traffic.",
+      "demo_rows": 4248,
+      "columns": [
+        {
+          "attname": "id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable internal record identifier; not reused.",
+          "identity_generation": "BY DEFAULT",
+          "identity_sequence": "network_port_id_seq"
+        },
+        {
+          "attname": "device_id",
+          "attnum": 2,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Physical device owning the port or placement."
+        },
+        {
+          "attname": "name",
+          "attnum": 3,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Port name unique within its physical device."
+        },
+        {
+          "attname": "speed_mbps",
+          "attnum": 4,
+          "type": "bigint",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Nominal interface speed in megabits per second; positive and distinct from measured traffic."
+        },
+        {
+          "attname": "mac_address",
+          "attnum": 5,
+          "type": "macaddr",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Hardware MAC address when applicable; NULL when unknown or inapplicable."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "network_port_device_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (device_id) REFERENCES device(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (device_id) REFERENCES device(ci_id)."
+        },
+        {
+          "conname": "network_port_device_id_name_key",
+          "contype": "u",
+          "definition": "UNIQUE (device_id, name)",
+          "comment": "Natural-key uniqueness. Rule: UNIQUE (device_id, name)."
+        },
+        {
+          "conname": "network_port_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (id)."
+        },
+        {
+          "conname": "network_port_speed_mbps_check",
+          "contype": "c",
+          "definition": "CHECK ((speed_mbps > 0))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((speed_mbps > 0))."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "network_port_device_id_name_key",
+          "definition": "CREATE UNIQUE INDEX network_port_device_id_name_key ON dcmon.network_port USING btree (device_id, name)",
+          "comment": "Prevents duplicate natural identities on network_port. Definition: btree (device_id, name)."
+        },
+        {
+          "name": "network_port_pkey",
+          "definition": "CREATE UNIQUE INDEX network_port_pkey ON dcmon.network_port USING btree (id)",
+          "comment": "Enforces the stable primary-key identity on network_port. Definition: btree (id)."
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "name": "rack",
+      "kind": "table",
+      "comment": "Rack location, U capacity, power budget and floor-plan coordinates within a room.",
+      "demo_rows": 48,
+      "columns": [
+        {
+          "attname": "ci_id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable reference to the configuration item in dcmon.ci."
+        },
+        {
+          "attname": "room_id",
+          "attnum": 2,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Physical room containing this object."
+        },
+        {
+          "attname": "height_u",
+          "attnum": 3,
+          "type": "integer",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Rack equipment capacity in rack units (U)."
+        },
+        {
+          "attname": "power_limit_kw",
+          "attnum": 4,
+          "type": "numeric(10,2)",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Allowed aggregate rack power in kilowatts; a capacity limit rather than a measurement."
+        },
+        {
+          "attname": "x_m",
+          "attnum": 5,
+          "type": "numeric(10,3)",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Floor-plan X coordinate in meters."
+        },
+        {
+          "attname": "y_m",
+          "attnum": 6,
+          "type": "numeric(10,3)",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Floor-plan Y coordinate in meters."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "rack_ci_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (ci_id) REFERENCES ci(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (ci_id) REFERENCES ci(ci_id)."
+        },
+        {
+          "conname": "rack_ci_id_room_id_key",
+          "contype": "u",
+          "definition": "UNIQUE (ci_id, room_id)",
+          "comment": "Natural-key uniqueness. Rule: UNIQUE (ci_id, room_id)."
+        },
+        {
+          "conname": "rack_height_u_check",
+          "contype": "c",
+          "definition": "CHECK ((height_u > 0))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((height_u > 0))."
+        },
+        {
+          "conname": "rack_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (ci_id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (ci_id)."
+        },
+        {
+          "conname": "rack_power_limit_kw_check",
+          "contype": "c",
+          "definition": "CHECK ((power_limit_kw > (0)::numeric))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((power_limit_kw > (0)::numeric))."
+        },
+        {
+          "conname": "rack_room_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (room_id) REFERENCES room(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (room_id) REFERENCES room(ci_id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "rack_ci_id_room_id_key",
+          "definition": "CREATE UNIQUE INDEX rack_ci_id_room_id_key ON dcmon.rack USING btree (ci_id, room_id)",
+          "comment": "Prevents duplicate natural identities on rack. Definition: btree (ci_id, room_id)."
+        },
+        {
+          "name": "rack_pkey",
+          "definition": "CREATE UNIQUE INDEX rack_pkey ON dcmon.rack USING btree (ci_id)",
+          "comment": "Enforces the stable primary-key identity on rack. Definition: btree (ci_id)."
+        }
+      ],
+      "triggers": [
+        {
+          "name": "rack_height_guard",
+          "definition": "CREATE TRIGGER rack_height_guard BEFORE UPDATE OF height_u ON dcmon.rack FOR EACH ROW EXECUTE FUNCTION prevent_rack_shrink()",
+          "function_name": "prevent_rack_shrink",
+          "comment": "Before rack height updates, rejects any height below the inclusive top U of an existing placement, including historical/closed intervals. Preserves historical physical validity; it is intentionally stricter than checking only current placements. Raises SQLSTATE 23514. Uses caller search_path dcmon,public."
+        },
+        {
+          "name": "subtype_kind",
+          "definition": "CREATE TRIGGER subtype_kind BEFORE INSERT OR UPDATE ON dcmon.rack FOR EACH ROW EXECUTE FUNCTION require_ci_kind('rack')",
+          "function_name": "require_ci_kind",
+          "comment": "On subtype INSERT/UPDATE, compares NEW.ci_id to the expected dcmon.ci.kind supplied in the trigger argument. Rejects both missing CIs and mismatches with SQLSTATE 23514; foreign keys separately maintain ownership. Does not require every CI to have a subtype row. Uses caller search_path dcmon,public."
+        }
+      ]
+    },
+    {
+      "name": "room",
+      "kind": "table",
+      "comment": "Data hall or technical room belonging to a data-center site.",
+      "demo_rows": 6,
+      "columns": [
+        {
+          "attname": "ci_id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable reference to the configuration item in dcmon.ci."
+        },
+        {
+          "attname": "site_id",
+          "attnum": 2,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Data-center site containing the room."
+        },
+        {
+          "attname": "floor_no",
+          "attnum": 3,
+          "type": "integer",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Building floor number."
+        },
+        {
+          "attname": "area_m2",
+          "attnum": 4,
+          "type": "numeric(10,2)",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Room floor area in square meters."
+        },
+        {
+          "attname": "room_type",
+          "attnum": 5,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Room purpose: data_hall, power, cooling or other."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "room_area_m2_check",
+          "contype": "c",
+          "definition": "CHECK ((area_m2 > (0)::numeric))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((area_m2 > (0)::numeric))."
+        },
+        {
+          "conname": "room_ci_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (ci_id) REFERENCES ci(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (ci_id) REFERENCES ci(ci_id)."
+        },
+        {
+          "conname": "room_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (ci_id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (ci_id)."
+        },
+        {
+          "conname": "room_room_type_check",
+          "contype": "c",
+          "definition": "CHECK ((room_type = ANY (ARRAY['data_hall'::text, 'power'::text, 'cooling'::text, 'other'::text])))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((room_type = ANY (ARRAY['data_hall'::text, 'power'::text, 'cooling'::text, 'other'::text])))."
+        },
+        {
+          "conname": "room_site_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (site_id) REFERENCES site(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (site_id) REFERENCES site(ci_id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "room_pkey",
+          "definition": "CREATE UNIQUE INDEX room_pkey ON dcmon.room USING btree (ci_id)",
+          "comment": "Enforces the stable primary-key identity on room. Definition: btree (ci_id)."
+        }
+      ],
+      "triggers": [
+        {
+          "name": "subtype_kind",
+          "definition": "CREATE TRIGGER subtype_kind BEFORE INSERT OR UPDATE ON dcmon.room FOR EACH ROW EXECUTE FUNCTION require_ci_kind('room')",
+          "function_name": "require_ci_kind",
+          "comment": "On subtype INSERT/UPDATE, compares NEW.ci_id to the expected dcmon.ci.kind supplied in the trigger argument. Rejects both missing CIs and mismatches with SQLSTATE 23514; foreign keys separately maintain ownership. Does not require every CI to have a subtype row. Uses caller search_path dcmon,public."
+        }
+      ]
+    },
+    {
+      "name": "runtime",
+      "kind": "table",
+      "comment": "VM, pod or container inventory. A recreated pod/container receives a new CI; a reused name does not establish identity.",
+      "demo_rows": 145,
+      "columns": [
+        {
+          "attname": "ci_id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable reference to the configuration item in dcmon.ci."
+        },
+        {
+          "attname": "runtime_kind",
+          "attnum": 2,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "VM, pod or container type; immutable after creation."
+        },
+        {
+          "attname": "namespace",
+          "attnum": 3,
+          "type": "text",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Orchestrator namespace; NULL for virtual machines."
+        },
+        {
+          "attname": "workload_name",
+          "attnum": 4,
+          "type": "text",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Logical deployment, StatefulSet or VM-group name; not object identity."
+        },
+        {
+          "attname": "image_ref",
+          "attnum": 5,
+          "type": "text",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Container image/digest or VM template reference, without access credentials."
+        },
+        {
+          "attname": "vcpu_allocated",
+          "attnum": 6,
+          "type": "numeric(10,3)",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Allocated or requested vCPU; not actual CPU utilization."
+        },
+        {
+          "attname": "memory_gib_allocated",
+          "attnum": 7,
+          "type": "numeric(12,3)",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Allocated or requested RAM in GiB; not measured memory utilization."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "runtime_ci_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (ci_id) REFERENCES ci(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (ci_id) REFERENCES ci(ci_id)."
+        },
+        {
+          "conname": "runtime_memory_gib_allocated_check",
+          "contype": "c",
+          "definition": "CHECK ((memory_gib_allocated >= (0)::numeric))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((memory_gib_allocated >= (0)::numeric))."
+        },
+        {
+          "conname": "runtime_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (ci_id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (ci_id)."
+        },
+        {
+          "conname": "runtime_runtime_kind_check",
+          "contype": "c",
+          "definition": "CHECK ((runtime_kind = ANY (ARRAY['vm'::text, 'pod'::text, 'container'::text])))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((runtime_kind = ANY (ARRAY['vm'::text, 'pod'::text, 'container'::text])))."
+        },
+        {
+          "conname": "runtime_vcpu_allocated_check",
+          "contype": "c",
+          "definition": "CHECK ((vcpu_allocated >= (0)::numeric))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((vcpu_allocated >= (0)::numeric))."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "runtime_pkey",
+          "definition": "CREATE UNIQUE INDEX runtime_pkey ON dcmon.runtime USING btree (ci_id)",
+          "comment": "Enforces the stable primary-key identity on runtime. Definition: btree (ci_id)."
+        }
+      ],
+      "triggers": [
+        {
+          "name": "runtime_kind_guard",
+          "definition": "CREATE TRIGGER runtime_kind_guard BEFORE UPDATE OF runtime_kind ON dcmon.runtime FOR EACH ROW EXECUTE FUNCTION immutable_runtime_kind()",
+          "function_name": "immutable_runtime_kind",
+          "comment": "Before runtime_kind updates, rejects changing VM/pod/container type with SQLSTATE 23514 because hosting rules depend on the subtype. A newly created workload instance requires its own identity."
+        },
+        {
+          "name": "subtype_kind",
+          "definition": "CREATE TRIGGER subtype_kind BEFORE INSERT OR UPDATE ON dcmon.runtime FOR EACH ROW EXECUTE FUNCTION require_ci_kind('runtime')",
+          "function_name": "require_ci_kind",
+          "comment": "On subtype INSERT/UPDATE, compares NEW.ci_id to the expected dcmon.ci.kind supplied in the trigger argument. Rejects both missing CIs and mismatches with SQLSTATE 23514; foreign keys separately maintain ownership. Does not require every CI to have a subtype row. Uses caller search_path dcmon,public."
+        }
+      ]
+    },
+    {
+      "name": "scene_object",
+      "kind": "table",
+      "comment": "Optional presentation coordinates and asset references for a CI. This legacy 3D mapping is inventory metadata, not required by the current illustrative browser views.",
+      "demo_rows": 60,
+      "columns": [
+        {
+          "attname": "id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable internal record identifier; not reused.",
+          "identity_generation": "BY DEFAULT",
+          "identity_sequence": "scene_object_id_seq"
+        },
+        {
+          "attname": "scene_key",
+          "attnum": 2,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Presentation scene key for network, site, hall or rack."
+        },
+        {
+          "attname": "ci_id",
+          "attnum": 3,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable reference to the configuration item in dcmon.ci."
+        },
+        {
+          "attname": "asset_ref",
+          "attnum": 4,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Relative legacy 3D asset reference; not a bundled runtime or database dependency."
+        },
+        {
+          "attname": "x",
+          "attnum": 5,
+          "type": "numeric(12,3)",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "X coordinate in scene-specific presentation units."
+        },
+        {
+          "attname": "y",
+          "attnum": 6,
+          "type": "numeric(12,3)",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Y coordinate in scene-specific presentation units."
+        },
+        {
+          "attname": "z",
+          "attnum": 7,
+          "type": "numeric(12,3)",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Z coordinate in scene-specific presentation units."
+        },
+        {
+          "attname": "rotation_deg",
+          "attnum": 8,
+          "type": "numeric(7,3)",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Rotation around the vertical axis in degrees."
+        },
+        {
+          "attname": "scale",
+          "attnum": 9,
+          "type": "numeric(10,4)",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Positive presentation scale multiplier."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "scene_object_ci_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (ci_id) REFERENCES ci(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (ci_id) REFERENCES ci(ci_id)."
+        },
+        {
+          "conname": "scene_object_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (id)."
+        },
+        {
+          "conname": "scene_object_scale_check",
+          "contype": "c",
+          "definition": "CHECK ((scale > (0)::numeric))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((scale > (0)::numeric))."
+        },
+        {
+          "conname": "scene_object_scene_key_ci_id_key",
+          "contype": "u",
+          "definition": "UNIQUE (scene_key, ci_id)",
+          "comment": "Natural-key uniqueness. Rule: UNIQUE (scene_key, ci_id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "scene_ci_idx",
+          "definition": "CREATE INDEX scene_ci_idx ON dcmon.scene_object USING btree (ci_id)",
+          "comment": "Finds optional presentation coordinates and assets for a CI on scene_object. Definition: btree (ci_id)."
+        },
+        {
+          "name": "scene_object_pkey",
+          "definition": "CREATE UNIQUE INDEX scene_object_pkey ON dcmon.scene_object USING btree (id)",
+          "comment": "Enforces the stable primary-key identity on scene_object. Definition: btree (id)."
+        },
+        {
+          "name": "scene_object_scene_key_ci_id_key",
+          "definition": "CREATE UNIQUE INDEX scene_object_scene_key_ci_id_key ON dcmon.scene_object USING btree (scene_key, ci_id)",
+          "comment": "Prevents duplicate natural identities on scene_object. Definition: btree (scene_key, ci_id)."
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "name": "site",
+      "kind": "table",
+      "comment": "Data-center site at the top of the physical navigation hierarchy.",
+      "demo_rows": 3,
+      "columns": [
+        {
+          "attname": "ci_id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable reference to the configuration item in dcmon.ci."
+        },
+        {
+          "attname": "city",
+          "attnum": 2,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Synthetic city/location label for demonstration."
+        },
+        {
+          "attname": "timezone",
+          "attnum": 3,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "IANA timezone used when presenting local timestamps."
+        },
+        {
+          "attname": "latitude",
+          "attnum": 4,
+          "type": "numeric(9,6)",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Latitude in degrees; NULL with longitude when unavailable or withheld."
+        },
+        {
+          "attname": "longitude",
+          "attnum": 5,
+          "type": "numeric(9,6)",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Longitude in degrees; NULL with latitude when unavailable or withheld."
+        },
+        {
+          "attname": "design_it_kw",
+          "attnum": 6,
+          "type": "numeric(12,2)",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Design IT power capacity in kilowatts; not measured consumption."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "site_check",
+          "contype": "c",
+          "definition": "CHECK (((latitude IS NULL) = (longitude IS NULL)))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK (((latitude IS NULL) = (longitude IS NULL)))."
+        },
+        {
+          "conname": "site_ci_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (ci_id) REFERENCES ci(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (ci_id) REFERENCES ci(ci_id)."
+        },
+        {
+          "conname": "site_design_it_kw_check",
+          "contype": "c",
+          "definition": "CHECK ((design_it_kw > (0)::numeric))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((design_it_kw > (0)::numeric))."
+        },
+        {
+          "conname": "site_latitude_check",
+          "contype": "c",
+          "definition": "CHECK (((latitude >= ('-90'::integer)::numeric) AND (latitude <= (90)::numeric)))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK (((latitude >= ('-90'::integer)::numeric) AND (latitude <= (90)::numeric)))."
+        },
+        {
+          "conname": "site_longitude_check",
+          "contype": "c",
+          "definition": "CHECK (((longitude >= ('-180'::integer)::numeric) AND (longitude <= (180)::numeric)))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK (((longitude >= ('-180'::integer)::numeric) AND (longitude <= (180)::numeric)))."
+        },
+        {
+          "conname": "site_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (ci_id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (ci_id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "site_pkey",
+          "definition": "CREATE UNIQUE INDEX site_pkey ON dcmon.site USING btree (ci_id)",
+          "comment": "Enforces the stable primary-key identity on site. Definition: btree (ci_id)."
+        }
+      ],
+      "triggers": [
+        {
+          "name": "subtype_kind",
+          "definition": "CREATE TRIGGER subtype_kind BEFORE INSERT OR UPDATE ON dcmon.site FOR EACH ROW EXECUTE FUNCTION require_ci_kind('site')",
+          "function_name": "require_ci_kind",
+          "comment": "On subtype INSERT/UPDATE, compares NEW.ci_id to the expected dcmon.ci.kind supplied in the trigger argument. Rejects both missing CIs and mismatches with SQLSTATE 23514; foreign keys separately maintain ownership. Does not require every CI to have a subtype row. Uses caller search_path dcmon,public."
+        }
+      ]
+    },
+    {
+      "name": "software_installation",
+      "kind": "table",
+      "comment": "Concrete installed software instance such as a machine OS, database instance or Java runtime.",
+      "demo_rows": 3040,
+      "columns": [
+        {
+          "attname": "ci_id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable reference to the configuration item in dcmon.ci."
+        },
+        {
+          "attname": "product_id",
+          "attnum": 2,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Software product referenced by this installation."
+        },
+        {
+          "attname": "version",
+          "attnum": 3,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Current inventory version; historical upgrades require an external change audit."
+        },
+        {
+          "attname": "instance_name",
+          "attnum": 4,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Concrete OS, service or database-instance name."
+        },
+        {
+          "attname": "listen_port",
+          "attnum": 5,
+          "type": "integer",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Service port from 1 to 65535 when applicable; NULL otherwise."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "software_installation_ci_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (ci_id) REFERENCES ci(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (ci_id) REFERENCES ci(ci_id)."
+        },
+        {
+          "conname": "software_installation_listen_port_check",
+          "contype": "c",
+          "definition": "CHECK (((listen_port >= 1) AND (listen_port <= 65535)))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK (((listen_port >= 1) AND (listen_port <= 65535)))."
+        },
+        {
+          "conname": "software_installation_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (ci_id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (ci_id)."
+        },
+        {
+          "conname": "software_installation_product_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (product_id) REFERENCES software_product(id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (product_id) REFERENCES software_product(id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "software_installation_pkey",
+          "definition": "CREATE UNIQUE INDEX software_installation_pkey ON dcmon.software_installation USING btree (ci_id)",
+          "comment": "Enforces the stable primary-key identity on software_installation. Definition: btree (ci_id)."
+        }
+      ],
+      "triggers": [
+        {
+          "name": "subtype_kind",
+          "definition": "CREATE TRIGGER subtype_kind BEFORE INSERT OR UPDATE ON dcmon.software_installation FOR EACH ROW EXECUTE FUNCTION require_ci_kind('installation')",
+          "function_name": "require_ci_kind",
+          "comment": "On subtype INSERT/UPDATE, compares NEW.ci_id to the expected dcmon.ci.kind supplied in the trigger argument. Rejects both missing CIs and mismatches with SQLSTATE 23514; foreign keys separately maintain ownership. Does not require every CI to have a subtype row. Uses caller search_path dcmon,public."
+        }
+      ]
+    },
+    {
+      "name": "software_product",
+      "kind": "table",
+      "comment": "Software product catalog for operating systems, databases, platforms, middleware and agents; distinct from business systems.",
+      "demo_rows": 7,
+      "columns": [
+        {
+          "attname": "id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable internal record identifier; not reused.",
+          "identity_generation": "BY DEFAULT",
+          "identity_sequence": "software_product_id_seq"
+        },
+        {
+          "attname": "code",
+          "attnum": 2,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable machine-readable catalog code."
+        },
+        {
+          "attname": "name",
+          "attnum": 3,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Human-readable display name; does not replace a stable identifier."
+        },
+        {
+          "attname": "category",
+          "attnum": 4,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Software class: os, dbms, platform, middleware or agent."
+        },
+        {
+          "attname": "vendor",
+          "attnum": 5,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Software vendor or maintaining community."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "software_product_category_check",
+          "contype": "c",
+          "definition": "CHECK ((category = ANY (ARRAY['os'::text, 'dbms'::text, 'platform'::text, 'middleware'::text, 'agent'::text])))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((category = ANY (ARRAY['os'::text, 'dbms'::text, 'platform'::text, 'middleware'::text, 'agent'::text])))."
+        },
+        {
+          "conname": "software_product_code_key",
+          "contype": "u",
+          "definition": "UNIQUE (code)",
+          "comment": "Natural-key uniqueness. Rule: UNIQUE (code)."
+        },
+        {
+          "conname": "software_product_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "software_product_code_key",
+          "definition": "CREATE UNIQUE INDEX software_product_code_key ON dcmon.software_product USING btree (code)",
+          "comment": "Prevents duplicate natural identities on software_product. Definition: btree (code)."
+        },
+        {
+          "name": "software_product_pkey",
+          "definition": "CREATE UNIQUE INDEX software_product_pkey ON dcmon.software_product USING btree (id)",
+          "comment": "Enforces the stable primary-key identity on software_product. Definition: btree (id)."
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "name": "source_system",
+      "kind": "table",
+      "comment": "Data-source integration registry containing configuration references and ownership, without passwords or access secrets.",
+      "demo_rows": 8,
+      "columns": [
+        {
+          "attname": "id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable internal record identifier; not reused.",
+          "identity_generation": "BY DEFAULT",
+          "identity_sequence": "source_system_id_seq"
+        },
+        {
+          "attname": "code",
+          "attnum": 2,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable machine-readable catalog code."
+        },
+        {
+          "attname": "name",
+          "attnum": 3,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Human-readable display name; does not replace a stable identifier."
+        },
+        {
+          "attname": "method",
+          "attnum": 4,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Integration method such as REST, JSON-RPC, exporter, gateway or file."
+        },
+        {
+          "attname": "endpoint_ref",
+          "attnum": 5,
+          "type": "text",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Non-secret endpoint or connector configuration reference; not a credential store."
+        },
+        {
+          "attname": "owner_team",
+          "attnum": 6,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Team accountable for availability of the integration."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "source_system_code_key",
+          "contype": "u",
+          "definition": "UNIQUE (code)",
+          "comment": "Natural-key uniqueness. Rule: UNIQUE (code)."
+        },
+        {
+          "conname": "source_system_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "source_system_code_key",
+          "definition": "CREATE UNIQUE INDEX source_system_code_key ON dcmon.source_system USING btree (code)",
+          "comment": "Prevents duplicate natural identities on source_system. Definition: btree (code)."
+        },
+        {
+          "name": "source_system_pkey",
+          "definition": "CREATE UNIQUE INDEX source_system_pkey ON dcmon.source_system USING btree (id)",
+          "comment": "Enforces the stable primary-key identity on source_system. Definition: btree (id)."
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "name": "status_observation",
+      "kind": "table",
+      "comment": "Technical CI status history with an explicit freshness lifetime; separate from lifecycle and incident counts.",
+      "demo_rows": 1725,
+      "columns": [
+        {
+          "attname": "ci_id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable reference to the configuration item in dcmon.ci."
+        },
+        {
+          "attname": "observed_at",
+          "attnum": 2,
+          "type": "timestamp with time zone",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Time the fact was observed in the source; used for as-of selection."
+        },
+        {
+          "attname": "state",
+          "attnum": 3,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Technical state used for status colors and labels; independent of lifecycle and incident state."
+        },
+        {
+          "attname": "reason",
+          "attnum": 4,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Source-provided explanation of the technical state."
+        },
+        {
+          "attname": "valid_for_sec",
+          "attnum": 5,
+          "type": "integer",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Maximum accepted age of this status observation, in seconds."
+        },
+        {
+          "attname": "source_id",
+          "attnum": 6,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Authoritative source record in dcmon.source_system."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "status_observation_ci_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (ci_id) REFERENCES ci(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (ci_id) REFERENCES ci(ci_id)."
+        },
+        {
+          "conname": "status_observation_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (ci_id, observed_at)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (ci_id, observed_at)."
+        },
+        {
+          "conname": "status_observation_source_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (source_id) REFERENCES source_system(id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (source_id) REFERENCES source_system(id)."
+        },
+        {
+          "conname": "status_observation_state_check",
+          "contype": "c",
+          "definition": "CHECK ((state = ANY (ARRAY['healthy'::text, 'warning'::text, 'critical'::text, 'unknown'::text, 'maintenance'::text])))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((state = ANY (ARRAY['healthy'::text, 'warning'::text, 'critical'::text, 'unknown'::text, 'maintenance'::text])))."
+        },
+        {
+          "conname": "status_observation_valid_for_sec_check",
+          "contype": "c",
+          "definition": "CHECK ((valid_for_sec > 0))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((valid_for_sec > 0))."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "status_latest_idx",
+          "definition": "CREATE INDEX status_latest_idx ON dcmon.status_observation USING btree (ci_id, observed_at DESC)",
+          "comment": "Selects the latest status observation at or before p_at per CI on status_observation. Definition: btree (ci_id, observed_at DESC)."
+        },
+        {
+          "name": "status_observation_pkey",
+          "definition": "CREATE UNIQUE INDEX status_observation_pkey ON dcmon.status_observation USING btree (ci_id, observed_at)",
+          "comment": "Enforces the stable primary-key identity on status_observation. Definition: btree (ci_id, observed_at)."
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "name": "storage_volume",
+      "kind": "table",
+      "comment": "Logical storage volume and its serving storage device; internal pool details remain in the storage source.",
+      "demo_rows": 6,
+      "columns": [
+        {
+          "attname": "ci_id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable reference to the configuration item in dcmon.ci."
+        },
+        {
+          "attname": "storage_device_id",
+          "attnum": 2,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Serving physical device; trigger requires the storage device class."
+        },
+        {
+          "attname": "capacity_gib",
+          "attnum": 3,
+          "type": "numeric(16,3)",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Allocated logical volume capacity in GiB; not used space."
+        },
+        {
+          "attname": "protocol",
+          "attnum": 4,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Volume access protocol: FC, iSCSI, NFS or NVMe-oF."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "storage_volume_capacity_gib_check",
+          "contype": "c",
+          "definition": "CHECK ((capacity_gib > (0)::numeric))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((capacity_gib > (0)::numeric))."
+        },
+        {
+          "conname": "storage_volume_ci_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (ci_id) REFERENCES ci(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (ci_id) REFERENCES ci(ci_id)."
+        },
+        {
+          "conname": "storage_volume_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (ci_id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (ci_id)."
+        },
+        {
+          "conname": "storage_volume_protocol_check",
+          "contype": "c",
+          "definition": "CHECK ((protocol = ANY (ARRAY['FC'::text, 'iSCSI'::text, 'NFS'::text, 'NVMe-oF'::text])))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((protocol = ANY (ARRAY['FC'::text, 'iSCSI'::text, 'NFS'::text, 'NVMe-oF'::text])))."
+        },
+        {
+          "conname": "storage_volume_storage_device_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (storage_device_id) REFERENCES device(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (storage_device_id) REFERENCES device(ci_id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "storage_volume_pkey",
+          "definition": "CREATE UNIQUE INDEX storage_volume_pkey ON dcmon.storage_volume USING btree (ci_id)",
+          "comment": "Enforces the stable primary-key identity on storage_volume. Definition: btree (ci_id)."
+        }
+      ],
+      "triggers": [
+        {
+          "name": "subtype_kind",
+          "definition": "CREATE TRIGGER subtype_kind BEFORE INSERT OR UPDATE ON dcmon.storage_volume FOR EACH ROW EXECUTE FUNCTION require_ci_kind('volume')",
+          "function_name": "require_ci_kind",
+          "comment": "On subtype INSERT/UPDATE, compares NEW.ci_id to the expected dcmon.ci.kind supplied in the trigger argument. Rejects both missing CIs and mismatches with SQLSTATE 23514; foreign keys separately maintain ownership. Does not require every CI to have a subtype row. Uses caller search_path dcmon,public."
+        },
+        {
+          "name": "volume_storage_kind",
+          "definition": "CREATE TRIGGER volume_storage_kind BEFORE INSERT OR UPDATE ON dcmon.storage_volume FOR EACH ROW EXECUTE FUNCTION check_storage_device()",
+          "function_name": "check_storage_device",
+          "comment": "On storage_volume INSERT/UPDATE, requires storage_device_id to identify a device of class storage. Rejects absent or other-class devices with SQLSTATE 23514. A foreign key alone cannot express the device-class requirement. Uses caller search_path dcmon,public."
+        }
+      ]
+    },
+    {
+      "name": "system_environment",
+      "kind": "table",
+      "comment": "PROD, TEST or DEV environment of one business system; placement and ownership remain environment-specific.",
+      "demo_rows": 18,
+      "columns": [
+        {
+          "attname": "id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable internal record identifier; not reused.",
+          "identity_generation": "BY DEFAULT",
+          "identity_sequence": "system_environment_id_seq"
+        },
+        {
+          "attname": "system_id",
+          "attnum": 2,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Business system owning this environment."
+        },
+        {
+          "attname": "environment",
+          "attnum": 3,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Operating environment: PROD, TEST or DEV."
+        },
+        {
+          "attname": "service_owner_team_id",
+          "attnum": 4,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Operations team responsible for this particular environment."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "system_environment_environment_check",
+          "contype": "c",
+          "definition": "CHECK ((environment = ANY (ARRAY['PROD'::text, 'TEST'::text, 'DEV'::text])))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK ((environment = ANY (ARRAY['PROD'::text, 'TEST'::text, 'DEV'::text])))."
+        },
+        {
+          "conname": "system_environment_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (id)."
+        },
+        {
+          "conname": "system_environment_service_owner_team_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (service_owner_team_id) REFERENCES team(id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (service_owner_team_id) REFERENCES team(id)."
+        },
+        {
+          "conname": "system_environment_system_id_environment_key",
+          "contype": "u",
+          "definition": "UNIQUE (system_id, environment)",
+          "comment": "Natural-key uniqueness. Rule: UNIQUE (system_id, environment)."
+        },
+        {
+          "conname": "system_environment_system_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (system_id) REFERENCES information_system(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (system_id) REFERENCES information_system(ci_id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "system_environment_pkey",
+          "definition": "CREATE UNIQUE INDEX system_environment_pkey ON dcmon.system_environment USING btree (id)",
+          "comment": "Enforces the stable primary-key identity on system_environment. Definition: btree (id)."
+        },
+        {
+          "name": "system_environment_system_id_environment_key",
+          "definition": "CREATE UNIQUE INDEX system_environment_system_id_environment_key ON dcmon.system_environment USING btree (system_id, environment)",
+          "comment": "Prevents duplicate natural identities on system_environment. Definition: btree (system_id, environment)."
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "name": "team",
+      "kind": "table",
+      "comment": "Synthetic service and operations teams; contains no personal contact details.",
+      "demo_rows": 4,
+      "columns": [
+        {
+          "attname": "id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable internal record identifier; not reused.",
+          "identity_generation": "BY DEFAULT",
+          "identity_sequence": "team_id_seq"
+        },
+        {
+          "attname": "code",
+          "attnum": 2,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable machine-readable catalog code."
+        },
+        {
+          "attname": "name",
+          "attnum": 3,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Human-readable display name; does not replace a stable identifier."
+        },
+        {
+          "attname": "contact_ref",
+          "attnum": 4,
+          "type": "text",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Synthetic service group or on-call reference; no personal password or private contact."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "team_code_key",
+          "contype": "u",
+          "definition": "UNIQUE (code)",
+          "comment": "Natural-key uniqueness. Rule: UNIQUE (code)."
+        },
+        {
+          "conname": "team_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (id)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "team_code_key",
+          "definition": "CREATE UNIQUE INDEX team_code_key ON dcmon.team USING btree (code)",
+          "comment": "Prevents duplicate natural identities on team. Definition: btree (code)."
+        },
+        {
+          "name": "team_pkey",
+          "definition": "CREATE UNIQUE INDEX team_pkey ON dcmon.team USING btree (id)",
+          "comment": "Enforces the stable primary-key identity on team. Definition: btree (id)."
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "name": "volume_attachment",
+      "kind": "table",
+      "comment": "Effective-dated attachment of a logical volume to compute; shared volumes can serve multiple hosts.",
+      "demo_rows": 48,
+      "columns": [
+        {
+          "attname": "id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Stable internal record identifier; not reused.",
+          "identity_generation": "BY DEFAULT",
+          "identity_sequence": "volume_attachment_id_seq"
+        },
+        {
+          "attname": "volume_id",
+          "attnum": 2,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Logical storage volume referenced by the attachment."
+        },
+        {
+          "attname": "host_id",
+          "attnum": 3,
+          "type": "bigint",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Compute host CI; endpoint type is validated."
+        },
+        {
+          "attname": "mount_ref",
+          "attnum": 4,
+          "type": "text",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Datastore, mount point or drive-letter reference without credentials."
+        },
+        {
+          "attname": "valid_from",
+          "attnum": 5,
+          "type": "timestamp with time zone",
+          "attnotnull": true,
+          "default_expr": null,
+          "comment": "Inclusive start of the relationship validity interval; business event time, not ingestion time."
+        },
+        {
+          "attname": "valid_to",
+          "attnum": 6,
+          "type": "timestamp with time zone",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Exclusive end of the relationship validity interval; NULL means open-ended."
+        }
+      ],
+      "constraints": [
+        {
+          "conname": "volume_attachment_check",
+          "contype": "c",
+          "definition": "CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))",
+          "comment": "Valid domain and cross-column consistency. Rule: CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))."
+        },
+        {
+          "conname": "volume_attachment_host_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (host_id) REFERENCES ci(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (host_id) REFERENCES ci(ci_id)."
+        },
+        {
+          "conname": "volume_attachment_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)",
+          "comment": "Stable record identity. Rule: PRIMARY KEY (id)."
+        },
+        {
+          "conname": "volume_attachment_volume_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (volume_id) REFERENCES storage_volume(ci_id)",
+          "comment": "Referential integrity. Rule: FOREIGN KEY (volume_id) REFERENCES storage_volume(ci_id)."
+        },
+        {
+          "conname": "volume_attachment_volume_id_host_id_tstzrange_excl",
+          "contype": "x",
+          "definition": "EXCLUDE USING gist (volume_id WITH =, host_id WITH =, tstzrange(valid_from, valid_to, '[)'::text) WITH &&)",
+          "comment": "Temporal or physical exclusivity. Rule: EXCLUDE USING gist (volume_id WITH =, host_id WITH =, tstzrange(valid_from, valid_to, '[)'::text) WITH &&)."
+        }
+      ],
+      "indexes": [
+        {
+          "name": "volume_attachment_pkey",
+          "definition": "CREATE UNIQUE INDEX volume_attachment_pkey ON dcmon.volume_attachment USING btree (id)",
+          "comment": "Enforces the stable primary-key identity on volume_attachment. Definition: btree (id)."
+        },
+        {
+          "name": "volume_attachment_volume_id_host_id_tstzrange_excl",
+          "definition": "CREATE INDEX volume_attachment_volume_id_host_id_tstzrange_excl ON dcmon.volume_attachment USING gist (volume_id, host_id, tstzrange(valid_from, valid_to, '[)'::text))",
+          "comment": "Prevents overlapping effective-dated relationships on volume_attachment. Definition: gist (volume_id, host_id, tstzrange(valid_from, valid_to, '[)'::text))."
+        }
+      ],
+      "triggers": [
+        {
+          "name": "valid_volume_host",
+          "definition": "CREATE TRIGGER valid_volume_host BEFORE INSERT OR UPDATE ON dcmon.volume_attachment FOR EACH ROW EXECUTE FUNCTION check_compute_reference()",
+          "function_name": "check_compute_reference",
+          "comment": "Validates INSERT/UPDATE targets for deployment, installation_placement and volume_attachment. A compute target is a physical server or any runtime; only deployment may additionally target software_installation. Raises SQLSTATE 23514 on a type mismatch; foreign keys separately require existence. Uses the caller search_path dcmon,public."
+        }
+      ]
+    },
+    {
+      "name": "v_inventory_summary",
+      "kind": "view",
+      "comment": "Counts of currently active inventory grouped by CI kind; planned and retired lifecycle entries are excluded.",
+      "demo_rows": null,
+      "columns": [
+        {
+          "attname": "kind",
+          "attnum": 1,
+          "type": "text",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "CI subtype included in the current active-inventory aggregation."
+        },
+        {
+          "attname": "objects",
+          "attnum": 2,
+          "type": "bigint",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Number of active inventory items of this subtype."
+        }
+      ],
+      "constraints": [],
+      "indexes": [],
+      "triggers": [],
+      "definition": "SELECT kind,\n    count(*) AS objects\n   FROM dcmon.ci c\n  WHERE (lifecycle = 'active'::text)\n  GROUP BY kind"
+    },
+    {
+      "name": "v_unmapped_compute",
+      "kind": "view",
+      "comment": "Active physical servers and runtimes without an application execution-path association at now(); excludes software installations and does not invent an owner.",
+      "demo_rows": null,
+      "columns": [
+        {
+          "attname": "ci_id",
+          "attnum": 1,
+          "type": "bigint",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Physical server or runtime CI lacking an execution-path association at now()."
+        },
+        {
+          "attname": "ci_key",
+          "attnum": 2,
+          "type": "text",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "Readable key of the unmapped server or runtime."
+        },
+        {
+          "attname": "kind",
+          "attnum": 3,
+          "type": "text",
+          "attnotnull": false,
+          "default_expr": null,
+          "comment": "CI kind of the unmapped item: device for a physical server, or runtime."
+        }
+      ],
+      "constraints": [],
+      "indexes": [],
+      "triggers": [],
+      "definition": "SELECT ci_id,\n    ci_key,\n    kind\n   FROM dcmon.ci c\n  WHERE ((kind = ANY (ARRAY['device'::text, 'runtime'::text])) AND (lifecycle = 'active'::text) AND dcmon.is_compute(ci_id) AND (NOT (EXISTS ( SELECT 1\n           FROM dcmon.execution_paths(now()) e(system_key, environment, component_key, target_key, server_key, server_id, node_ids)\n          WHERE (c.ci_id = ANY (e.node_ids))))))"
+    }
+  ],
+  "functions": [
+    {
+      "proname": "check_compute_reference",
+      "args": "",
+      "returns": "trigger",
+      "comment": "Validates INSERT/UPDATE targets for deployment, installation_placement and volume_attachment. A compute target is a physical server or any runtime; only deployment may additionally target software_installation. Raises SQLSTATE 23514 on a type mismatch; foreign keys separately require existence. Uses the caller search_path dcmon,public."
+    },
+    {
+      "proname": "check_dependency",
+      "args": "",
+      "returns": "trigger",
+      "comment": "Checks directed consumer/provider types on dependency INSERT/UPDATE. Application: component to component/installation; power: device/rack to PDU/UPS/generator; cooling: room/rack/device to CRAC/chiller; network: device/runtime to switch; storage: device/runtime to storage. Rejects unknown/missing endpoint types with SQLSTATE 23514; does not infer availability, redundancy or traversal in the reverse direction. Uses caller search_path dcmon,public."
+    },
+    {
+      "proname": "check_hosting",
+      "args": "",
+      "returns": "trigger",
+      "comment": "Checks hosting INSERT/UPDATE hierarchy: VM to physical server, pod to VM/server, container to pod. Rejects invalid or missing endpoint types with SQLSTATE 23514. Effective-dated overlap constraints separately prevent simultaneous hosts. Uses caller search_path dcmon,public."
+    },
+    {
+      "proname": "check_metric_value",
+      "args": "",
+      "returns": "trigger",
+      "comment": "On metric_sample INSERT/UPDATE, validates only quality=ok against its definition valid_min/valid_max. NULL bounds leave that side unrestricted. Table checks independently require finite values for ok and NULL for missing/error. Warning and critical thresholds are presentation guidance, never validity limits. Raises SQLSTATE 23514 for a range breach. Uses caller search_path dcmon,public."
+    },
+    {
+      "proname": "check_rack_space",
+      "args": "",
+      "returns": "trigger",
+      "comment": "On device_placement INSERT/UPDATE with a U interval, acquires a shared lock on the target rack and checks inclusive top U (u_start+u_height-1) against height_u. NULL U denotes floor/0U placement and bypasses the capacity test; table checks and exclusions enforce other shape/overlap rules. Raises SQLSTATE 23514 on overflow. Uses caller search_path dcmon,public."
+    },
+    {
+      "proname": "check_storage_device",
+      "args": "",
+      "returns": "trigger",
+      "comment": "On storage_volume INSERT/UPDATE, requires storage_device_id to identify a device of class storage. Rejects absent or other-class devices with SQLSTATE 23514. A foreign key alone cannot express the device-class requirement. Uses caller search_path dcmon,public."
+    },
+    {
+      "proname": "compute_paths",
+      "args": "p_at timestamp with time zone",
+      "returns": "TABLE(origin_id bigint, server_id bigint, node_ids bigint[])",
+      "comment": "Returns origin_id, terminal physical server_id and ordered node_ids for server/runtime/installation origins visible at p_at. Follows hosting and installation_placement intervals [valid_from,valid_to), excludes planned origins, respects origin first_seen_at/retired_at, and includes a physical server own one-node path. Rejects revisiting a path node and caps node count at 64. Multiple legitimate paths remain separate; downstream selection deduplicates hosts. Does not reconstruct historical software versions."
+    },
+    {
+      "proname": "execution_paths",
+      "args": "p_at timestamp with time zone",
+      "returns": "TABLE(system_key text, environment text, component_key text, target_key text, server_key text, server_id bigint, node_ids bigint[])",
+      "comment": "Returns application-to-server execution paths at p_at: component root, first target, ordered node_ids and system/environment keys. Traverses effective deployment, directed application dependencies, installation placement and guest-to-host hosting using half-open intervals. The visited-node guard prevents cycles and the 64-node cap bounds recursion. Emits each path ending at a physical server; does not deduplicate paths or apply CI lifecycle visibility independently of relationship intervals."
+    },
+    {
+      "proname": "immutable_ci_kind",
+      "args": "",
+      "returns": "trigger",
+      "comment": "Before ci kind updates, rejects a different subtype with SQLSTATE 23514 so existing subtype, topology and telemetry references retain their interpretation. Other inventory attributes may change. Retiring/replacing a CI preserves identity history instead of retyping it."
+    },
+    {
+      "proname": "immutable_device_class",
+      "args": "",
+      "returns": "trigger",
+      "comment": "Before device_class updates, rejects a different class with SQLSTATE 23514 because dependency and hosting rules rely on that class. Replace or retire an incorrectly classified device through an explicit migration rather than silently reinterpreting relationships."
+    },
+    {
+      "proname": "immutable_runtime_kind",
+      "args": "",
+      "returns": "trigger",
+      "comment": "Before runtime_kind updates, rejects changing VM/pod/container type with SQLSTATE 23514 because hosting rules depend on the subtype. A newly created workload instance requires its own identity."
+    },
+    {
+      "proname": "is_compute",
+      "args": "p_id bigint",
+      "returns": "boolean",
+      "comment": "Returns true if p_id is a physical device of class server or a runtime; false for missing IDs and other physical equipment. It is a type predicate, not a lifecycle, health, placement or capacity test. Uses caller search_path dcmon,public."
+    },
+    {
+      "proname": "metric_snapshot",
+      "args": "p_at timestamp with time zone",
+      "returns": "TABLE(series_id bigint, ci_id bigint, object_key text, metric_code text, unit text, labels jsonb, observed_at timestamp with time zone, raw_value numeric, display_value numeric, freshness text, age_seconds numeric)",
+      "comment": "For every metric_series, selects the latest sample with observed_at<=p_at, independent of ingestion time. Returns raw_value for diagnosis and display_value only when quality=ok and observation age is <=stale_after_sec. No point yields missing; age strictly above the budget yields stale before checking point quality; otherwise quality missing/error propagates, or ok becomes fresh. Age is in seconds and no value or timestamp is fabricated. Does not filter series by CI lifecycle or first_seen_at; labels/definitions are current inventory attributes."
+    },
+    {
+      "proname": "prevent_rack_shrink",
+      "args": "",
+      "returns": "trigger",
+      "comment": "Before rack height updates, rejects any height below the inclusive top U of an existing placement, including historical/closed intervals. Preserves historical physical validity; it is intentionally stricter than checking only current placements. Raises SQLSTATE 23514. Uses caller search_path dcmon,public."
+    },
+    {
+      "proname": "require_ci_kind",
+      "args": "",
+      "returns": "trigger",
+      "comment": "On subtype INSERT/UPDATE, compares NEW.ci_id to the expected dcmon.ci.kind supplied in the trigger argument. Rejects both missing CIs and mismatches with SQLSTATE 23514; foreign keys separately maintain ownership. Does not require every CI to have a subtype row. Uses caller search_path dcmon,public."
+    },
+    {
+      "proname": "status_snapshot",
+      "args": "p_at timestamp with time zone",
+      "returns": "TABLE(ci_id bigint, object_key text, state text, reason text, observed_at timestamp with time zone)",
+      "comment": "For each CI with first_seen_at<=p_at and no retirement at/before p_at, selects its latest status_observation with observed_at<=p_at. No observation or age strictly greater than valid_for_sec becomes unknown, with an English reason; equality remains fresh. Preserves the source timestamp for stale diagnostics. Does not exclude planned lifecycle CIs or infer status from incidents/metrics."
+    },
+    {
+      "proname": "system_hosts",
+      "args": "p_system_key text, p_environment text, p_software_code text, p_at timestamp with time zone",
+      "returns": "TABLE(server_id bigint, server_key text, server_name text, rack_key text, room_key text, site_key text)",
+      "comment": "Returns distinct physical servers selected by optional system key, environment and software product code at p_at; NULL means no restriction. Uses execution_paths and, only with both system/environment NULL, compute_paths to retain unmapped hosts. Software must be on the selected path or installed on a node of that path, avoiding sibling VM leakage. Current effective device placement supplies optional rack/room/site keys; unplaced hosts remain with NULL location. Does not test historical software version."
+    },
+    {
+      "proname": "system_incidents",
+      "args": "p_system_key text, p_environment text, p_at timestamp with time zone",
+      "returns": "TABLE(incident_key text, title text, severity text, state text, detected_at timestamp with time zone, matched_objects bigint, interpretation text)",
+      "comment": "Returns one row per incident in system_scope at p_at with detection and incident-CI link times not after p_at. Latest workflow event determines state; resolved/closed incidents are excluded. matched_objects counts distinct in-scope linked CIs and all impact_role values may match, so potential risk is not a confirmed application outage. Multiple links do not multiply incidents. Interpretation remains explicitly advisory."
+    },
+    {
+      "proname": "system_scope",
+      "args": "p_system_key text, p_environment text, p_at timestamp with time zone",
+      "returns": "TABLE(ci_id bigint)",
+      "comment": "Builds CI scope for optional system/environment at p_at from execution-path nodes, matching components and systems, effective physical locations, software installed on core nodes, attached volumes and containing clusters. With both filters NULL it also seeds historically visible CIs. Recurses only consumer-to-provider through non-application infrastructure dependencies; UNION deduplicates nodes and terminates cycles. Never traverses reverse hosting to sibling VMs. Location/attachment expansion uses the core set, not every later infrastructure node; the function does not infer transitive impact severity."
+    },
+    {
+      "proname": "system_software",
+      "args": "p_system_key text, p_environment text, p_at timestamp with time zone",
+      "returns": "TABLE(system_key text, environment text, server_key text, installation_key text, product_code text, category text, version text, association text)",
+      "comment": "Returns distinct software installations placed on nodes of selected execution paths at p_at with optional system/environment filters (NULL is unrestricted). association=explicit_dependency means the installation itself is a path node; otherwise installed_on_execution_path means presence on a path host, not proof of use. Only placement is effective-dated: version, product and instance inventory remain current attributes. Unmapped compute is not added by this function."
+    }
+  ],
+  "sequences": [
+    {
+      "name": "backup_run_id_seq",
+      "table_name": "backup_run",
+      "column_name": "id",
+      "owned_by": "backup_run.id",
+      "dependency_type": "i",
+      "identity_generation": "BY DEFAULT",
+      "start_value": 1,
+      "increment_by": 1,
+      "min_value": 1,
+      "max_value": 9223372036854775807,
+      "cycle": false,
+      "cache_size": 1,
+      "restore_policy": "max restored owned identity with is_called=true; 1 uncalled when empty"
+    },
+    {
+      "name": "ci_ci_id_seq",
+      "table_name": "ci",
+      "column_name": "ci_id",
+      "owned_by": "ci.ci_id",
+      "dependency_type": "i",
+      "identity_generation": "BY DEFAULT",
+      "start_value": 1,
+      "increment_by": 1,
+      "min_value": 1,
+      "max_value": 9223372036854775807,
+      "cycle": false,
+      "cache_size": 1,
+      "restore_policy": "max restored owned identity with is_called=true; 1 uncalled when empty"
+    },
+    {
+      "name": "cluster_member_id_seq",
+      "table_name": "cluster_member",
+      "column_name": "id",
+      "owned_by": "cluster_member.id",
+      "dependency_type": "i",
+      "identity_generation": "BY DEFAULT",
+      "start_value": 1,
+      "increment_by": 1,
+      "min_value": 1,
+      "max_value": 9223372036854775807,
+      "cycle": false,
+      "cache_size": 1,
+      "restore_policy": "max restored owned identity with is_called=true; 1 uncalled when empty"
+    },
+    {
+      "name": "dependency_id_seq",
+      "table_name": "dependency",
+      "column_name": "id",
+      "owned_by": "dependency.id",
+      "dependency_type": "i",
+      "identity_generation": "BY DEFAULT",
+      "start_value": 1,
+      "increment_by": 1,
+      "min_value": 1,
+      "max_value": 9223372036854775807,
+      "cycle": false,
+      "cache_size": 1,
+      "restore_policy": "max restored owned identity with is_called=true; 1 uncalled when empty"
+    },
+    {
+      "name": "deployment_id_seq",
+      "table_name": "deployment",
+      "column_name": "id",
+      "owned_by": "deployment.id",
+      "dependency_type": "i",
+      "identity_generation": "BY DEFAULT",
+      "start_value": 1,
+      "increment_by": 1,
+      "min_value": 1,
+      "max_value": 9223372036854775807,
+      "cycle": false,
+      "cache_size": 1,
+      "restore_policy": "max restored owned identity with is_called=true; 1 uncalled when empty"
+    },
+    {
+      "name": "device_placement_id_seq",
+      "table_name": "device_placement",
+      "column_name": "id",
+      "owned_by": "device_placement.id",
+      "dependency_type": "i",
+      "identity_generation": "BY DEFAULT",
+      "start_value": 1,
+      "increment_by": 1,
+      "min_value": 1,
+      "max_value": 9223372036854775807,
+      "cycle": false,
+      "cache_size": 1,
+      "restore_policy": "max restored owned identity with is_called=true; 1 uncalled when empty"
+    },
+    {
+      "name": "hosting_id_seq",
+      "table_name": "hosting",
+      "column_name": "id",
+      "owned_by": "hosting.id",
+      "dependency_type": "i",
+      "identity_generation": "BY DEFAULT",
+      "start_value": 1,
+      "increment_by": 1,
+      "min_value": 1,
+      "max_value": 9223372036854775807,
+      "cycle": false,
+      "cache_size": 1,
+      "restore_policy": "max restored owned identity with is_called=true; 1 uncalled when empty"
+    },
+    {
+      "name": "incident_event_id_seq",
+      "table_name": "incident_event",
+      "column_name": "id",
+      "owned_by": "incident_event.id",
+      "dependency_type": "i",
+      "identity_generation": "BY DEFAULT",
+      "start_value": 1,
+      "increment_by": 1,
+      "min_value": 1,
+      "max_value": 9223372036854775807,
+      "cycle": false,
+      "cache_size": 1,
+      "restore_policy": "max restored owned identity with is_called=true; 1 uncalled when empty"
+    },
+    {
+      "name": "incident_id_seq",
+      "table_name": "incident",
+      "column_name": "id",
+      "owned_by": "incident.id",
+      "dependency_type": "i",
+      "identity_generation": "BY DEFAULT",
+      "start_value": 1,
+      "increment_by": 1,
+      "min_value": 1,
+      "max_value": 9223372036854775807,
+      "cycle": false,
+      "cache_size": 1,
+      "restore_policy": "max restored owned identity with is_called=true; 1 uncalled when empty"
+    },
+    {
+      "name": "ingestion_run_id_seq",
+      "table_name": "ingestion_run",
+      "column_name": "id",
+      "owned_by": "ingestion_run.id",
+      "dependency_type": "i",
+      "identity_generation": "BY DEFAULT",
+      "start_value": 1,
+      "increment_by": 1,
+      "min_value": 1,
+      "max_value": 9223372036854775807,
+      "cycle": false,
+      "cache_size": 1,
+      "restore_policy": "max restored owned identity with is_called=true; 1 uncalled when empty"
+    },
+    {
+      "name": "installation_placement_id_seq",
+      "table_name": "installation_placement",
+      "column_name": "id",
+      "owned_by": "installation_placement.id",
+      "dependency_type": "i",
+      "identity_generation": "BY DEFAULT",
+      "start_value": 1,
+      "increment_by": 1,
+      "min_value": 1,
+      "max_value": 9223372036854775807,
+      "cycle": false,
+      "cache_size": 1,
+      "restore_policy": "max restored owned identity with is_called=true; 1 uncalled when empty"
+    },
+    {
+      "name": "maintenance_window_id_seq",
+      "table_name": "maintenance_window",
+      "column_name": "id",
+      "owned_by": "maintenance_window.id",
+      "dependency_type": "i",
+      "identity_generation": "BY DEFAULT",
+      "start_value": 1,
+      "increment_by": 1,
+      "min_value": 1,
+      "max_value": 9223372036854775807,
+      "cycle": false,
+      "cache_size": 1,
+      "restore_policy": "max restored owned identity with is_called=true; 1 uncalled when empty"
+    },
+    {
+      "name": "metric_definition_id_seq",
+      "table_name": "metric_definition",
+      "column_name": "id",
+      "owned_by": "metric_definition.id",
+      "dependency_type": "i",
+      "identity_generation": "BY DEFAULT",
+      "start_value": 1,
+      "increment_by": 1,
+      "min_value": 1,
+      "max_value": 9223372036854775807,
+      "cycle": false,
+      "cache_size": 1,
+      "restore_policy": "max restored owned identity with is_called=true; 1 uncalled when empty"
+    },
+    {
+      "name": "metric_series_series_id_seq",
+      "table_name": "metric_series",
+      "column_name": "series_id",
+      "owned_by": "metric_series.series_id",
+      "dependency_type": "i",
+      "identity_generation": "BY DEFAULT",
+      "start_value": 1,
+      "increment_by": 1,
+      "min_value": 1,
+      "max_value": 9223372036854775807,
+      "cycle": false,
+      "cache_size": 1,
+      "restore_policy": "max restored owned identity with is_called=true; 1 uncalled when empty"
+    },
+    {
+      "name": "network_link_id_seq",
+      "table_name": "network_link",
+      "column_name": "id",
+      "owned_by": "network_link.id",
+      "dependency_type": "i",
+      "identity_generation": "BY DEFAULT",
+      "start_value": 1,
+      "increment_by": 1,
+      "min_value": 1,
+      "max_value": 9223372036854775807,
+      "cycle": false,
+      "cache_size": 1,
+      "restore_policy": "max restored owned identity with is_called=true; 1 uncalled when empty"
+    },
+    {
+      "name": "network_port_id_seq",
+      "table_name": "network_port",
+      "column_name": "id",
+      "owned_by": "network_port.id",
+      "dependency_type": "i",
+      "identity_generation": "BY DEFAULT",
+      "start_value": 1,
+      "increment_by": 1,
+      "min_value": 1,
+      "max_value": 9223372036854775807,
+      "cycle": false,
+      "cache_size": 1,
+      "restore_policy": "max restored owned identity with is_called=true; 1 uncalled when empty"
+    },
+    {
+      "name": "scene_object_id_seq",
+      "table_name": "scene_object",
+      "column_name": "id",
+      "owned_by": "scene_object.id",
+      "dependency_type": "i",
+      "identity_generation": "BY DEFAULT",
+      "start_value": 1,
+      "increment_by": 1,
+      "min_value": 1,
+      "max_value": 9223372036854775807,
+      "cycle": false,
+      "cache_size": 1,
+      "restore_policy": "max restored owned identity with is_called=true; 1 uncalled when empty"
+    },
+    {
+      "name": "software_product_id_seq",
+      "table_name": "software_product",
+      "column_name": "id",
+      "owned_by": "software_product.id",
+      "dependency_type": "i",
+      "identity_generation": "BY DEFAULT",
+      "start_value": 1,
+      "increment_by": 1,
+      "min_value": 1,
+      "max_value": 9223372036854775807,
+      "cycle": false,
+      "cache_size": 1,
+      "restore_policy": "max restored owned identity with is_called=true; 1 uncalled when empty"
+    },
+    {
+      "name": "source_system_id_seq",
+      "table_name": "source_system",
+      "column_name": "id",
+      "owned_by": "source_system.id",
+      "dependency_type": "i",
+      "identity_generation": "BY DEFAULT",
+      "start_value": 1,
+      "increment_by": 1,
+      "min_value": 1,
+      "max_value": 9223372036854775807,
+      "cycle": false,
+      "cache_size": 1,
+      "restore_policy": "max restored owned identity with is_called=true; 1 uncalled when empty"
+    },
+    {
+      "name": "system_environment_id_seq",
+      "table_name": "system_environment",
+      "column_name": "id",
+      "owned_by": "system_environment.id",
+      "dependency_type": "i",
+      "identity_generation": "BY DEFAULT",
+      "start_value": 1,
+      "increment_by": 1,
+      "min_value": 1,
+      "max_value": 9223372036854775807,
+      "cycle": false,
+      "cache_size": 1,
+      "restore_policy": "max restored owned identity with is_called=true; 1 uncalled when empty"
+    },
+    {
+      "name": "team_id_seq",
+      "table_name": "team",
+      "column_name": "id",
+      "owned_by": "team.id",
+      "dependency_type": "i",
+      "identity_generation": "BY DEFAULT",
+      "start_value": 1,
+      "increment_by": 1,
+      "min_value": 1,
+      "max_value": 9223372036854775807,
+      "cycle": false,
+      "cache_size": 1,
+      "restore_policy": "max restored owned identity with is_called=true; 1 uncalled when empty"
+    },
+    {
+      "name": "volume_attachment_id_seq",
+      "table_name": "volume_attachment",
+      "column_name": "id",
+      "owned_by": "volume_attachment.id",
+      "dependency_type": "i",
+      "identity_generation": "BY DEFAULT",
+      "start_value": 1,
+      "increment_by": 1,
+      "min_value": 1,
+      "max_value": 9223372036854775807,
+      "cycle": false,
+      "cache_size": 1,
+      "restore_policy": "max restored owned identity with is_called=true; 1 uncalled when empty"
+    }
+  ],
+  "metric_definitions": [
+    {
+      "id": 1,
+      "code": "cpu_pct",
+      "name": "CPU utilization",
+      "unit": "percent",
+      "metric_type": "gauge",
+      "valid_min": 0,
+      "valid_max": 100,
+      "warning_above": 80,
+      "critical_above": 95,
+      "series_count": 1164
+    },
+    {
+      "id": 2,
+      "code": "memory_pct",
+      "name": "Memory utilization",
+      "unit": "percent",
+      "metric_type": "gauge",
+      "valid_min": 0,
+      "valid_max": 100,
+      "warning_above": 85,
+      "critical_above": 95,
+      "series_count": 1164
+    },
+    {
+      "id": 3,
+      "code": "storage_pct",
+      "name": "Storage utilization",
+      "unit": "percent",
+      "metric_type": "gauge",
+      "valid_min": 0,
+      "valid_max": 100,
+      "warning_above": 80,
+      "critical_above": 95,
+      "series_count": 972
+    },
+    {
+      "id": 4,
+      "code": "power_w",
+      "name": "Active power",
+      "unit": "W",
+      "metric_type": "gauge",
+      "valid_min": 0,
+      "valid_max": null,
+      "warning_above": null,
+      "critical_above": null,
+      "series_count": 972
+    },
+    {
+      "id": 5,
+      "code": "inlet_c",
+      "name": "Inlet temperature",
+      "unit": "celsius",
+      "metric_type": "gauge",
+      "valid_min": -40,
+      "valid_max": 100,
+      "warning_above": 28,
+      "critical_above": 32,
+      "series_count": 990
+    },
+    {
+      "id": 6,
+      "code": "humidity_pct",
+      "name": "Humidity",
+      "unit": "percent",
+      "metric_type": "gauge",
+      "valid_min": 0,
+      "valid_max": 100,
+      "warning_above": 65,
+      "critical_above": 75,
+      "series_count": 6
+    },
+    {
+      "id": 7,
+      "code": "fan_rpm",
+      "name": "Fan speed",
+      "unit": "rpm",
+      "metric_type": "gauge",
+      "valid_min": 0,
+      "valid_max": 50000,
+      "warning_above": null,
+      "critical_above": null,
+      "series_count": 1
+    },
+    {
+      "id": 8,
+      "code": "network_rx_bytes",
+      "name": "Received bytes",
+      "unit": "bytes",
+      "metric_type": "counter",
+      "valid_min": 0,
+      "valid_max": null,
+      "warning_above": null,
+      "critical_above": null,
+      "series_count": 1
+    },
+    {
+      "id": 27,
+      "code": "disk_capacity_gib",
+      "name": "Disk capacity",
+      "unit": "GiB",
+      "metric_type": "gauge",
+      "valid_min": 0,
+      "valid_max": null,
+      "warning_above": null,
+      "critical_above": null,
+      "series_count": 1944
+    },
+    {
+      "id": 28,
+      "code": "disk_used_gib",
+      "name": "Disk space used",
+      "unit": "GiB",
+      "metric_type": "gauge",
+      "valid_min": 0,
+      "valid_max": null,
+      "warning_above": null,
+      "critical_above": null,
+      "series_count": 1944
+    },
+    {
+      "id": 29,
+      "code": "disk_used_pct",
+      "name": "Disk utilization",
+      "unit": "percent",
+      "metric_type": "gauge",
+      "valid_min": 0,
+      "valid_max": 100,
+      "warning_above": 80,
+      "critical_above": 95,
+      "series_count": 1944
+    },
+    {
+      "id": 30,
+      "code": "disk_c",
+      "name": "Disk temperature",
+      "unit": "C",
+      "metric_type": "gauge",
+      "valid_min": -20,
+      "valid_max": 100,
+      "warning_above": 45,
+      "critical_above": 55,
+      "series_count": 1944
+    },
+    {
+      "id": 31,
+      "code": "disk_read_iops",
+      "name": "Read IOPS",
+      "unit": "IOPS",
+      "metric_type": "gauge",
+      "valid_min": 0,
+      "valid_max": null,
+      "warning_above": null,
+      "critical_above": null,
+      "series_count": 1944
+    },
+    {
+      "id": 32,
+      "code": "disk_write_iops",
+      "name": "Write IOPS",
+      "unit": "IOPS",
+      "metric_type": "gauge",
+      "valid_min": 0,
+      "valid_max": null,
+      "warning_above": null,
+      "critical_above": null,
+      "series_count": 1944
+    },
+    {
+      "id": 33,
+      "code": "disk_read_mib_s",
+      "name": "Read throughput",
+      "unit": "MiB/s",
+      "metric_type": "gauge",
+      "valid_min": 0,
+      "valid_max": null,
+      "warning_above": null,
+      "critical_above": null,
+      "series_count": 1944
+    },
+    {
+      "id": 34,
+      "code": "disk_write_mib_s",
+      "name": "Write throughput",
+      "unit": "MiB/s",
+      "metric_type": "gauge",
+      "valid_min": 0,
+      "valid_max": null,
+      "warning_above": null,
+      "critical_above": null,
+      "series_count": 1944
+    },
+    {
+      "id": 35,
+      "code": "disk_latency_ms",
+      "name": "Disk latency",
+      "unit": "ms",
+      "metric_type": "gauge",
+      "valid_min": 0,
+      "valid_max": null,
+      "warning_above": 20,
+      "critical_above": 40,
+      "series_count": 1944
+    },
+    {
+      "id": 36,
+      "code": "disk_busy_pct",
+      "name": "I/O utilization",
+      "unit": "percent",
+      "metric_type": "gauge",
+      "valid_min": 0,
+      "valid_max": 100,
+      "warning_above": 80,
+      "critical_above": 95,
+      "series_count": 1944
+    },
+    {
+      "id": 37,
+      "code": "disk_smart_errors",
+      "name": "SMART errors",
+      "unit": "count",
+      "metric_type": "gauge",
+      "valid_min": 0,
+      "valid_max": null,
+      "warning_above": 0,
+      "critical_above": 5,
+      "series_count": 1944
+    },
+    {
+      "id": 38,
+      "code": "net_rx_mbps",
+      "name": "Receive throughput",
+      "unit": "Mbps",
+      "metric_type": "gauge",
+      "valid_min": 0,
+      "valid_max": null,
+      "warning_above": null,
+      "critical_above": null,
+      "series_count": 2304
+    },
+    {
+      "id": 39,
+      "code": "net_tx_mbps",
+      "name": "Transmit throughput",
+      "unit": "Mbps",
+      "metric_type": "gauge",
+      "valid_min": 0,
+      "valid_max": null,
+      "warning_above": null,
+      "critical_above": null,
+      "series_count": 2304
+    },
+    {
+      "id": 40,
+      "code": "net_util_pct",
+      "name": "Port utilization",
+      "unit": "percent",
+      "metric_type": "gauge",
+      "valid_min": 0,
+      "valid_max": 100,
+      "warning_above": 80,
+      "critical_above": 95,
+      "series_count": 2304
+    },
+    {
+      "id": 41,
+      "code": "net_errors_s",
+      "name": "Errors per second",
+      "unit": "errors/s",
+      "metric_type": "gauge",
+      "valid_min": 0,
+      "valid_max": null,
+      "warning_above": 0,
+      "critical_above": 10,
+      "series_count": 2304
+    },
+    {
+      "id": 42,
+      "code": "net_discards_s",
+      "name": "Discards per second",
+      "unit": "packets/s",
+      "metric_type": "gauge",
+      "valid_min": 0,
+      "valid_max": null,
+      "warning_above": 0,
+      "critical_above": 20,
+      "series_count": 2304
+    },
+    {
+      "id": 43,
+      "code": "net_link_up",
+      "name": "Port link state",
+      "unit": "boolean",
+      "metric_type": "gauge",
+      "valid_min": 0,
+      "valid_max": 1,
+      "warning_above": null,
+      "critical_above": null,
+      "series_count": 2304
+    },
+    {
+      "id": 44,
+      "code": "switch_c",
+      "name": "Switch temperature",
+      "unit": "C",
+      "metric_type": "gauge",
+      "valid_min": -20,
+      "valid_max": 100,
+      "warning_above": 65,
+      "critical_above": 80,
+      "series_count": 96
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "generator": "built-in image_gen",
+  "date": "2026-10-26",
+  "prompts": [
+    {
+      "name": "campus",
+      "reference": "02-datacenter.png",
+      "prompt": "Extract and recreate ONLY the realistic cutaway datacenter illustration from the reference, removing all dashboard UI. Simplify to exactly TWO adjacent machine halls, left and right, each containing exactly TWO black server cabinets (four cabinets total), separated by a visible wall; no other server cabinets. Industrial facade, glazed entrance, roof cut away above both halls, structural walls, service wing, cooling plant, landscaping, access road, fine architectural detailing. Camera high isometric front-left, whole building centered, left hall and right hall clearly separated. Premium realistic architectural visualization, metallic materials, soft neutral white lighting, charcoal surroundings matching #17151B. Wide image 1536x1024, building fills most of frame with 8% margin. Do not copy any numbers or data. NO text, labels, markers, colored status glows, logos, UI or border. This is a neutral background for live clickable hall labels."
+    },
+    {
+      "name": "hall",
+      "reference": "03-hall.png",
+      "prompt": "Extract and recreate ONLY the detailed realistic cutaway datacenter room illustration, removing all UI. CRITICAL: exactly TWO tall black server rack cabinets total, separated well: one cabinet at left center and one at right center. Not two rows: exactly two individual cabinets. Closed black perforated front doors, subtle metallic details, no visible rack occupancy or individual status LEDs. A compact machine room scaled for two cabinets: raised pale gray tile floor, two cutaway walls, overhead cable ladders and pipes, neutral white wall lights, service door, a neutral white cooling cabinet on rear wall. High isometric view from front-left. Cabinets easy to identify and click separately. Premium photoreal architectural lighting and contact shadows on charcoal #17151B background. Landscape1536x1024. NO text, labels, data, colored status glows, arrows, UI or logos. Fill frame, balanced composition."
+    },
+    {
+      "name": "rack",
+      "reference": "04-rack.png",
+      "prompt": "Extract and recreate ONLY a front-on empty black server rack cabinet from this reference as a standalone realistic product illustration. Portrait1024x1536. Straight orthographic front view, centered perfectly vertical, no perspective taper. Entire cabinet visible from top to base with narrow margins. Matte black steel frame, fine mounting rails and screw holes, subtle side panel texture, neutral brushed metal details. CRITICAL: completely EMPTY inside, continuous flat dark unobstructed rectangular opening; NO installed servers, switches, blanking panels or cables across the opening. No open door crossing the rack. Inner opening fills x22%–78%, y8%–92% of canvas; exterior frame x15%–85%. Interior will receive accurate live device overlays. Neutral studio illumination, charcoal background #17151B, subtle floor contact shadow. NO numbers, U labels, text, UI, controls, colored lights or logos."
+    },
+    {
+      "name": "server-front",
+      "reference": "05-server.png",
+      "prompt": "Create a separate hyperrealistic product image of ONLY the FRONT PANEL of the rack server shown in the reference. Strict orthographic front elevation, perfectly rectangular and symmetric, no top or side perspective. Brushed dark steel 2U rackmount chassis with four perforated drive caddies across, two rows, burgundy latch accents, silver rack ears and screws, tiny unlit indicators and power button. Entire front face fills image width from 0% to100% and central vertical band from25% to75%; outside that band plain solid charcoal #17151B. Wide1536x512 image. NO other objects, no shadow extending outside face, no green/amber status lights, no labels, text, numbers, logos, UI or annotations. This texture is placed in live rack slots, so keep hardware neutral and highly detailed."
+    },
+    {
+      "name": "server",
+      "reference": "05-server.png",
+      "prompt": "Extract and recreate ONLY the central large realistic server product illustration from the reference, removing all UI and annotations. Single generic 2U rackmount server in three-quarter perspective from front-left and above; brushed aluminum lid, fine stamped vents and screw fasteners, front black perforated hot-swap drive trays in two rows, burgundy caddy latches, mounting ears and handles. Whole chassis centered, fills80% of width on dark charcoal #17151B studio ground with restrained floor grid and soft reflection/contact shadow. High quality photographic product render, neutral softbox light, crisp details. Wide1536x1024. No rear-view inset. No detached components. No text, numbers, labels, branding, dashboard UI, callouts or status symbols. All small LED points off/neutral: operational status is supplied separately."
+    }
+  ],
+  "correction": "Edit this architectural render. Keep the entire building, two rooms, camera, walls, services, site, lighting and palette exactly as they are. Replace the FOUR LONG ROWS of cabinets in the two machine rooms with FOUR SINGLE SHORT RACK CABINETS. Each room must contain exactly two standalone cabinets. A single cabinet is a compact tower 0.6 meters wide, 1 meter deep, 2 meters tall: one small square roof panel and ONE front door, not a row, no multiple door divisions. Leave ample empty tile floor around the four cabinets. No other changes. No text, logos or status lights.",
+  "final_assets": [
+    {
+      "name": "campus.png",
+      "sha256": "43ce6d208603b5b36efe61f4adf1f001d34364175f372b8edfac6119675d7181",
+      "source_artifact": "exec-e626649b-9a70-410f-9986-3f86600aaed6.png"
+    },
+    {
+      "name": "hall.png",
+      "sha256": "4745c08611c39d0059e0d4b89d55581c76053cbc0a9a95e94baedb1ce55b4657",
+      "source_artifact": "exec-db37eae9-0364-4860-b315-640a3afd6450.png"
+    },
+    {
+      "name": "rack.png",
+      "sha256": "5d87e5b9712642fbb862f2e1b925b40fed4795a76ff387baa5b513516eda46fd",
+      "source_artifact": "exec-a4f01f54-692d-429f-9170-2be269d7cc31.png"
+    },
+    {
+      "name": "server-front.png",
+      "sha256": "a3c00c2920a360d4ea02f1a5931fe474b3ae79791069bd553e5aeff83a5d5f70",
+      "source_artifact": "exec-cf598c52-a752-4145-bc11-8bc56bd9d2cb.png"
+    },
+    {
+      "name": "server.png",
+      "sha256": "b29370edd4d084178a6ad9a3645ea86b16e0e356c60eed7d907f5901449fa14f",
+      "source_artifact": "exec-f71c9851-372c-4d36-aedd-937096edb92e.png"
+    },
+    {
+      "name": "network-scene.png",
+      "source_artifact": "exec-692de918-1d5a-4e90-b8c6-97044a2902d7.png",
+      "sha256": "649e2878f61b45529d89edcc967b04a767c63a7bb9e824261bb63fe0f4264cfd",
+      "generation_record": "additional_generation_records:network-scene",
+      "also_embedded_as": "dc-network-scene.png"
+    }
+  ],
+  "description": "Recorded AI illustration provenance; personal source paths replaced by artifact basenames. Equipment labels, measurements, state and placement are supplied by the dashboard, not these images.",
+  "additional_generation_records": [
+    {
+      "name": "network-scene",
+      "generator": "built-in ImageGen",
+      "date": "2026-10-25",
+      "reference": "01-network.png",
+      "prompt_english_paraphrase": "Extract the central isometric scene of three data-center campuses from the user reference and recreate it as a standalone 2:1 illustration. Preserve architecture and composition: large North campus at lower left, East at upper right, smaller Reserve at lower right; dark ground, neutral light connections and realistic illumination. Remove all interface elements, text, numbers, labels, status and colored signal outlines. Match background colors #17151B and #242128.",
+      "record_note": "English paraphrase of the original generation brief recorded with the demonstration asset. The original reference image is not redistributed.",
+      "source_artifact": "exec-692de918-1d5a-4e90-b8c6-97044a2902d7.png"
+    }
+  ]
+}

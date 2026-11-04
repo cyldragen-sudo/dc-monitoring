@@ -1,0 +1,22 @@
+# Local credentials, databases, build products, and review scratch files.
+.env
+.env.*
+!.env.example
+.pgpass
+.pg_service.conf
+.private/
+.superpowers/
+.work/
+.venv/
+__pycache__/
+*.py[cod]
+*.class
+*.jar
+.DS_Store
+build/
+dist/
+node_modules/
+*.log
+*.tmp
+# Internal preparation notes are not part of the public documentation.
+docs/superpowers/

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>DC infrastructure</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main id="app" aria-label="DC infrastructure">
+      <nav id="breadcrumbs" aria-label="Equipment path"></nav>
+      <section id="kpis" aria-label="Scope metrics"></section>
+      <div class="workspace">
+        <section class="stage" aria-label="Interactive infrastructure view">
+          <div class="scene-header">
+            <div>
+              <span id="eyebrow">INFRASTRUCTURE</span>
+              <h1 id="scene-title">Loading…</h1>
+            </div>
+            <span id="scene-status"></span>
+          </div>
+          <div id="empty" hidden>
+            No servers match the selected filters. Physical equipment placement
+            is shown.
+          </div>
+          <div id="viewport"></div>
+          <section
+            id="trends"
+            aria-label="Server utilization history"
+            hidden
+          ></section>
+          <div class="scene-help">Select an object in the image to open it</div>
+        </section>
+        <aside id="details" aria-label="Object details"></aside>
+      </div>
+      <footer>
+        Illustrative architecture and appearance · Inventory, rack units and
+        metrics come from the source · Gray servers are outside the filter
+      </footer>
+    </main>
+    <div id="error" role="alert" hidden></div>
+    <script type="module" src="app.mjs"></script>
+  </body>
+</html>

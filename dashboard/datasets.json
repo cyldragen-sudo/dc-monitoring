@@ -1,0 +1,243 @@
+[
+  {
+    "name": "filters_system",
+    "file": "sql/filters_system.sql",
+    "parameters": {}
+  },
+  {
+    "name": "filters_environment",
+    "file": "sql/filters_environment.sql",
+    "parameters": {}
+  },
+  {
+    "name": "filters_software",
+    "file": "sql/filters_software.sql",
+    "parameters": {}
+  },
+  {
+    "name": "filters_server",
+    "file": "sql/filters_server.sql",
+    "parameters": {
+      "p_system": 0,
+      "p_env": 0,
+      "p_software": 0,
+      "p_server": 0,
+      "p_page": 1,
+      "p_site": 0
+    }
+  },
+  {
+    "name": "summary",
+    "file": "sql/summary.sql",
+    "parameters": {
+      "p_system": 0,
+      "p_env": 0,
+      "p_software": 0,
+      "p_server": 0,
+      "p_page": 1,
+      "p_site": 0
+    }
+  },
+  {
+    "name": "servers_page",
+    "file": "sql/servers_page.sql",
+    "parameters": {
+      "p_system": 0,
+      "p_env": 0,
+      "p_software": 0,
+      "p_server": 0,
+      "p_page": 1,
+      "p_site": 0
+    }
+  },
+  {
+    "name": "server_card",
+    "file": "sql/server_card.sql",
+    "parameters": {
+      "p_system": 0,
+      "p_env": 0,
+      "p_software": 0,
+      "p_server": 0,
+      "p_page": 1,
+      "p_site": 0
+    }
+  },
+  {
+    "name": "server_software",
+    "file": "sql/server_software.sql",
+    "parameters": {
+      "p_system": 0,
+      "p_env": 0,
+      "p_software": 0,
+      "p_server": 0,
+      "p_page": 1,
+      "p_site": 0
+    }
+  },
+  {
+    "name": "software_summary",
+    "file": "sql/software_summary.sql",
+    "parameters": {
+      "p_system": 0,
+      "p_env": 0,
+      "p_software": 0,
+      "p_server": 0,
+      "p_page": 1,
+      "p_site": 0
+    }
+  },
+  {
+    "name": "incidents",
+    "file": "sql/incidents.sql",
+    "parameters": {
+      "p_system": 0,
+      "p_env": 0,
+      "p_software": 0,
+      "p_server": 0,
+      "p_page": 1,
+      "p_site": 0
+    }
+  },
+  {
+    "name": "server_incidents",
+    "file": "sql/server_incidents.sql",
+    "parameters": {
+      "p_system": 0,
+      "p_env": 0,
+      "p_software": 0,
+      "p_server": 0,
+      "p_page": 1,
+      "p_site": 0
+    }
+  },
+  {
+    "name": "cpu_history",
+    "file": "sql/cpu_history.sql",
+    "parameters": {
+      "p_system": 0,
+      "p_env": 0,
+      "p_software": 0,
+      "p_server": 0,
+      "p_page": 1,
+      "p_site": 0
+    }
+  },
+  {
+    "name": "filters_site",
+    "file": "sql/filters_site.sql",
+    "parameters": {}
+  },
+  {
+    "name": "network_summary",
+    "file": "sql/network_summary.sql",
+    "parameters": {
+      "p_system": 0,
+      "p_env": 0,
+      "p_software": 0,
+      "p_server": 0,
+      "p_page": 1,
+      "p_site": 0
+    }
+  },
+  {
+    "name": "network_sites",
+    "file": "sql/network_sites.sql",
+    "parameters": {
+      "p_system": 0,
+      "p_env": 0,
+      "p_software": 0,
+      "p_server": 0,
+      "p_page": 1,
+      "p_site": 0
+    }
+  },
+  {
+    "name": "network_power_history",
+    "file": "sql/network_power_history.sql",
+    "parameters": {
+      "p_system": 0,
+      "p_env": 0,
+      "p_software": 0,
+      "p_server": 0,
+      "p_page": 1,
+      "p_site": 0
+    }
+  },
+  {
+    "name": "network_incident",
+    "file": "sql/network_incident.sql",
+    "parameters": {
+      "p_system": 0,
+      "p_env": 0,
+      "p_software": 0,
+      "p_server": 0,
+      "p_page": 1,
+      "p_site": 0
+    }
+  },
+  {
+    "name": "it_context",
+    "file": "sql/it_context.sql",
+    "parameters": {
+      "p_system": 0,
+      "p_env": 0,
+      "p_software": 0,
+      "p_server": 0,
+      "p_page": 1,
+      "p_site": 0
+    }
+  },
+  {
+    "name": "scene_payload",
+    "file": "sql/scene_payload.sql",
+    "parameters": {
+      "p_system": 0,
+      "p_env": 0,
+      "p_software": 0,
+      "p_server": 0,
+      "p_page": 1,
+      "p_site": 0,
+      "p_scene_server": 0,
+      "p_scene_target": 0,
+      "p_scene_part": 0
+    }
+  },
+  {
+    "name": "filters_history_device",
+    "file": "sql/filters_history_device.sql",
+    "parameters": {
+      "p_system": 0,
+      "p_env": 0,
+      "p_software": 0,
+      "p_server": 0,
+      "p_page": 1,
+      "p_site": 0
+    }
+  },
+  {
+    "name": "problems_payload",
+    "file": "sql/problems_payload.sql",
+    "parameters": {
+      "p_system": 0,
+      "p_env": 0,
+      "p_software": 0,
+      "p_server": 0,
+      "p_page": 1,
+      "p_site": 0
+    }
+  },
+  {
+    "name": "history_payload",
+    "file": "sql/history_payload.sql",
+    "parameters": {
+      "p_system": 0,
+      "p_env": 0,
+      "p_software": 0,
+      "p_server": 0,
+      "p_page": 1,
+      "p_site": 0,
+      "p_history_device": 0,
+      "p_history_series": 0
+    }
+  }
+]
